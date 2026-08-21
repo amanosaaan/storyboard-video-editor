@@ -4,6 +4,7 @@ import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { exportProjectFile } from '../storage/projectPortability';
 import { useProjectStore } from '../state/projectStore';
+import { ContextToolbar } from './ContextToolbar';
 import { BackIcon } from './icons';
 import { Inspector } from './Inspector';
 import { PreviewPanel } from './PreviewPanel';
@@ -14,6 +15,7 @@ export function EditorView() {
   const closeProject = useProjectStore((s) => s.closeProject);
   const renameProject = useProjectStore((s) => s.renameProject);
   const selectLayer = useProjectStore((s) => s.selectLayer);
+  const selectedLayerId = useProjectStore((s) => s.selectedLayerId);
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
@@ -27,6 +29,7 @@ export function EditorView() {
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
+  const selectedLayer = currentScene.layers.find((l) => l.id === selectedLayerId);
 
   async function handleExport() {
     if (!project) return;
@@ -97,6 +100,7 @@ export function EditorView() {
           </span>
         ))}
       </nav>
+      <ContextToolbar project={project} sceneId={currentScene.id} sceneDurationMs={currentScene.duration} layer={selectedLayer} />
       <div className="editor__body">
         <div className="editor__center">
           <div className="editor__preview-area">

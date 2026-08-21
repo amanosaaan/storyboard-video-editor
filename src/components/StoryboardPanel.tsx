@@ -1,10 +1,106 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Project, Scene } from '../domain/types';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { Project, Scene, TransitionConfig } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
+import { NumberField } from './NumberField';
 import { PauseIcon, PlayIcon, PlusIcon } from './icons';
+
+const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: string; preview: string }[] = [
+  { type: 'none', label: 'なし', preview: '—' },
+  { type: 'crossfade', label: 'クロスフェード', preview: '◐' },
+  { type: 'slide', label: 'スライド', preview: '→' },
+  { type: 'wipe', label: 'ワイプ', preview: '▤' },
+];
+
+interface TransitionConnectorProps {
+  scene: Scene;
+}
+
+function TransitionConnector({ scene }: TransitionConnectorProps) {
+  const [isOpen, setOpen] = useState(false);
+  const [flyoutPos, setFlyoutPos] = useState<{ left: number; top: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const updateScene = useProjectStore((s) => s.updateScene);
+  const transitionOut = scene.transitionOut;
+
+  function openFlyout() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) setFlyoutPos({ left: rect.left + rect.width / 2, top: rect.top });
+    setOpen(true);
+  }
+
+  return (
+    <div className="transition-connector">
+      <button
+        ref={buttonRef}
+        className={`transition-connector__button${transitionOut ? ' has-transition' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isOpen) setOpen(false);
+          else openFlyout();
+        }}
+        aria-label="切り替え効果"
+        title="切り替え効果"
+      >
+        {transitionOut ? TRANSITION_OPTIONS.find((o) => o.type === transitionOut.type)?.preview : '⇄'}
+      </button>
+      {isOpen &&
+        flyoutPos &&
+        createPortal(
+          <>
+            <div className="transition-flyout__backdrop" onClick={() => setOpen(false)} />
+            <div
+              className="transition-flyout"
+              style={{ left: flyoutPos.left, top: flyoutPos.top }}
+              onClick={(e) => e.stopPropagation()}
+            >
+            <h3>切り替え効果</h3>
+            <div className="transition-flyout__grid">
+              {TRANSITION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.type}
+                  className={`transition-flyout__option${
+                    (transitionOut?.type ?? 'none') === opt.type ? ' is-selected' : ''
+                  }`}
+                  onClick={() =>
+                    updateScene(scene.id, {
+                      transitionOut:
+                        opt.type === 'none'
+                          ? undefined
+                          : { type: opt.type, durationMs: transitionOut?.durationMs ?? 600 },
+                    })
+                  }
+                >
+                  <span className="transition-flyout__preview">{opt.preview}</span>
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+            {transitionOut && (
+              <label className="transition-flyout__duration">
+                長さ (秒)
+                <NumberField
+                  min={0.1}
+                  max={Math.max(0.1, scene.duration / 1000)}
+                  step={0.1}
+                  value={transitionOut.durationMs / 1000}
+                  onChange={(v) =>
+                    updateScene(scene.id, { transitionOut: { ...transitionOut, durationMs: Math.max(100, v * 1000) } })
+                  }
+                />
+              </label>
+            )}
+            </div>
+          </>,
+          document.body,
+        )}
+    </div>
+  );
+}
 
 interface SceneCardProps {
   scene: Scene;
@@ -29,10 +125,7 @@ function SceneCard({ scene, index, isSelected, onSelect }: SceneCardProps) {
       className={`scene-card${isSelected ? ' is-selected' : ''}`}
       onClick={() => onSelect(scene.id)}
     >
-      <div className="scene-card__index">
-        シーン {index + 1}
-        {scene.transitionOut && ' 🔀'}
-      </div>
+      <div className="scene-card__index">シーン {index + 1}</div>
       <div className="scene-card__duration">{(scene.duration / 1000).toFixed(1)}s</div>
       <div className="scene-card__actions">
         <button
@@ -109,7 +202,10 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         <SortableContext items={project.scenes.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
           <div className="storyboard__list">
             {project.scenes.map((scene, i) => (
-              <SceneCard key={scene.id} scene={scene} index={i} isSelected={scene.id === currentSceneId} onSelect={onSelectScene} />
+              <div className="storyboard__item" key={scene.id}>
+                <SceneCard scene={scene} index={i} isSelected={scene.id === currentSceneId} onSelect={onSelectScene} />
+                {i < project.scenes.length - 1 && <TransitionConnector scene={scene} />}
+              </div>
             ))}
             <button className="storyboard__add" onClick={handleAddScene} aria-label="シーン追加">
               <PlusIcon />
