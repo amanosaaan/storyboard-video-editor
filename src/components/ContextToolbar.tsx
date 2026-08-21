@@ -1,3 +1,4 @@
+import { alignPatch, bringToFrontPatch, rotatePatch, sendToBackPatch } from '../domain/arrange';
 import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, Scene, ShapeLayer, TextLayer } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
@@ -19,34 +20,19 @@ function ArrangeGroup({ project, scene, layer }: { project: Project; scene: Scen
   const updateLayer = useProjectStore((s) => s.updateLayer);
 
   function bringToFront() {
-    const maxZ = Math.max(...scene.layers.map((l) => l.zIndex));
-    updateLayer(scene.id, layer.id, { zIndex: maxZ + 1 });
+    updateLayer(scene.id, layer.id, bringToFrontPatch(scene.layers));
   }
 
   function sendToBack() {
-    const minZ = Math.min(...scene.layers.map((l) => l.zIndex));
-    updateLayer(scene.id, layer.id, { zIndex: minZ - 1 });
+    updateLayer(scene.id, layer.id, sendToBackPatch(scene.layers));
   }
 
   function align(axis: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') {
-    switch (axis) {
-      case 'left':
-        return updateLayer(scene.id, layer.id, { x: 0 });
-      case 'centerH':
-        return updateLayer(scene.id, layer.id, { x: (project.resolution.width - layer.width) / 2 });
-      case 'right':
-        return updateLayer(scene.id, layer.id, { x: project.resolution.width - layer.width });
-      case 'top':
-        return updateLayer(scene.id, layer.id, { y: 0 });
-      case 'centerV':
-        return updateLayer(scene.id, layer.id, { y: (project.resolution.height - layer.height) / 2 });
-      case 'bottom':
-        return updateLayer(scene.id, layer.id, { y: project.resolution.height - layer.height });
-    }
+    updateLayer(scene.id, layer.id, alignPatch(project, layer, axis));
   }
 
   function rotate(deltaDeg: number) {
-    updateLayer(scene.id, layer.id, { rotation: ((layer.rotation + deltaDeg) % 360 + 360) % 360 });
+    updateLayer(scene.id, layer.id, rotatePatch(layer, deltaDeg));
   }
 
   return (

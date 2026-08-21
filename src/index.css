@@ -302,6 +302,64 @@ label {
   white-space: nowrap;
 }
 
+.menubar-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+button.editor__menubar-item {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font: inherit;
+}
+
+button.editor__menubar-item:hover,
+button.editor__menubar-item[aria-expanded='true'] {
+  background: var(--bg-hover);
+}
+
+.menubar-dropdown__panel {
+  position: fixed;
+  margin-top: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  z-index: 60;
+}
+
+.menubar-dropdown__panel button {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.menubar-dropdown__panel button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.menubar-dropdown__panel button:disabled {
+  color: var(--text);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.menubar-dropdown__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
 .editor__body {
   flex: 1;
   display: grid;

@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { useState } from 'react';
+import { stepZIndexPatches } from '../domain/arrange';
 import { computeCaptionPresetLayout } from '../domain/captionPreset';
 import type { Layer, Project, Scene, ShapeLayer, TextLayer } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
@@ -101,12 +102,10 @@ export function Inspector({ project, scene }: Props) {
   }
 
   function moveLayer(target: Layer, direction: 'front' | 'back') {
-    const index = sortedLayers.findIndex((l) => l.id === target.id);
-    const neighborIndex = direction === 'front' ? index - 1 : index + 1;
-    const neighbor = sortedLayers[neighborIndex];
-    if (!neighbor) return;
-    updateLayer(scene.id, target.id, { zIndex: neighbor.zIndex });
-    updateLayer(scene.id, neighbor.id, { zIndex: target.zIndex });
+    const result = stepZIndexPatches(scene.layers, target, direction === 'front' ? 'forward' : 'backward');
+    if (!result) return;
+    updateLayer(scene.id, target.id, result.targetPatch);
+    updateLayer(scene.id, result.neighborId, result.neighborPatch);
   }
 
   return (

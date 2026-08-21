@@ -4,6 +4,7 @@ import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { exportProjectFile } from '../storage/projectPortability';
 import { useProjectStore } from '../state/projectStore';
+import { ArrangeMenu } from './ArrangeMenu';
 import { ContextToolbar } from './ContextToolbar';
 import { EditorToolbar } from './EditorToolbar';
 import { BackIcon } from './icons';
@@ -94,9 +95,15 @@ export function EditorView() {
           {exporting ? `書き出し中… ${Math.round(exportProgress * 100)}%` : 'MP4で書き出し'}
         </button>
       </header>
-      <nav className="editor__menubar" aria-hidden="true">
-        {['ファイル', '編集', '表示', '挿入', '表示形式', 'シーン', '配置', 'ツール', 'ヘルプ'].map((label) => (
-          <span key={label} className="editor__menubar-item">
+      <nav className="editor__menubar">
+        {['ファイル', '編集', '表示', '挿入', '表示形式', 'シーン'].map((label) => (
+          <span key={label} className="editor__menubar-item" aria-hidden="true">
+            {label}
+          </span>
+        ))}
+        <ArrangeMenu project={project} scene={currentScene} layer={selectedLayer} />
+        {['ツール', 'ヘルプ'].map((label) => (
+          <span key={label} className="editor__menubar-item" aria-hidden="true">
             {label}
           </span>
         ))}
