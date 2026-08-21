@@ -1,7 +1,95 @@
-import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, ShapeLayer, TextLayer } from '../domain/types';
+import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, Scene, ShapeLayer, TextLayer } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
-import { TrashIcon } from './icons';
+import {
+  AlignBottomIcon,
+  AlignCenterHIcon,
+  AlignLeftIcon,
+  AlignMiddleIcon,
+  AlignRightIcon,
+  AlignTopIcon,
+  BringToFrontIcon,
+  RotateLeftIcon,
+  RotateRightIcon,
+  SendToBackIcon,
+  TrashIcon,
+} from './icons';
+
+function ArrangeGroup({ project, scene, layer }: { project: Project; scene: Scene; layer: Layer }) {
+  const updateLayer = useProjectStore((s) => s.updateLayer);
+
+  function bringToFront() {
+    const maxZ = Math.max(...scene.layers.map((l) => l.zIndex));
+    updateLayer(scene.id, layer.id, { zIndex: maxZ + 1 });
+  }
+
+  function sendToBack() {
+    const minZ = Math.min(...scene.layers.map((l) => l.zIndex));
+    updateLayer(scene.id, layer.id, { zIndex: minZ - 1 });
+  }
+
+  function align(axis: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') {
+    switch (axis) {
+      case 'left':
+        return updateLayer(scene.id, layer.id, { x: 0 });
+      case 'centerH':
+        return updateLayer(scene.id, layer.id, { x: (project.resolution.width - layer.width) / 2 });
+      case 'right':
+        return updateLayer(scene.id, layer.id, { x: project.resolution.width - layer.width });
+      case 'top':
+        return updateLayer(scene.id, layer.id, { y: 0 });
+      case 'centerV':
+        return updateLayer(scene.id, layer.id, { y: (project.resolution.height - layer.height) / 2 });
+      case 'bottom':
+        return updateLayer(scene.id, layer.id, { y: project.resolution.height - layer.height });
+    }
+  }
+
+  function rotate(deltaDeg: number) {
+    updateLayer(scene.id, layer.id, { rotation: ((layer.rotation + deltaDeg) % 360 + 360) % 360 });
+  }
+
+  return (
+    <div className="context-toolbar__group context-toolbar__group--arrange">
+      <div className="context-toolbar__icon-row">
+        <button className="context-toolbar__icon-btn" title="最前面へ" onClick={bringToFront}>
+          <BringToFrontIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="最背面へ" onClick={sendToBack}>
+          <SendToBackIcon />
+        </button>
+      </div>
+      <div className="context-toolbar__icon-row">
+        <button className="context-toolbar__icon-btn" title="左揃え" onClick={() => align('left')}>
+          <AlignLeftIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="左右中央" onClick={() => align('centerH')}>
+          <AlignCenterHIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="右揃え" onClick={() => align('right')}>
+          <AlignRightIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="上揃え" onClick={() => align('top')}>
+          <AlignTopIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="上下中央" onClick={() => align('centerV')}>
+          <AlignMiddleIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="下揃え" onClick={() => align('bottom')}>
+          <AlignBottomIcon />
+        </button>
+      </div>
+      <div className="context-toolbar__icon-row">
+        <button className="context-toolbar__icon-btn" title="反時計回りに90度回転" onClick={() => rotate(-90)}>
+          <RotateLeftIcon />
+        </button>
+        <button className="context-toolbar__icon-btn" title="時計回りに90度回転" onClick={() => rotate(90)}>
+          <RotateRightIcon />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const ANIMATION_LABELS: Record<AnimationConfig['type'], string> = {
   pulse: 'パルス',
@@ -111,16 +199,19 @@ function hexToRgba(hex: string, alpha: number): string {
 
 interface Props {
   project: Project;
-  sceneId: string;
-  sceneDurationMs: number;
+  scene: Scene;
   layer: Layer | undefined;
 }
 
-export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Props) {
+export function ContextToolbar({ project, scene, layer }: Props) {
+  const sceneId = scene.id;
+  const sceneDurationMs = scene.duration;
   const updateLayer = useProjectStore((s) => s.updateLayer);
   const removeLayer = useProjectStore((s) => s.removeLayer);
 
   if (!layer) return <div className="context-toolbar context-toolbar--empty" aria-hidden="true" />;
+
+  const Arrange = <ArrangeGroup project={project} scene={scene} layer={layer} />;
 
   const DeleteButton = (
     <button className="btn-icon context-toolbar__delete" title="削除" onClick={() => removeLayer(sceneId, layer.id)}>
@@ -131,6 +222,7 @@ export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Pro
   if (layer.type === 'text') {
     return (
       <div className="context-toolbar">
+        {Arrange}
         <textarea
           className="context-toolbar__text"
           value={layer.content}
@@ -190,6 +282,7 @@ export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Pro
   if (layer.type === 'shape') {
     return (
       <div className="context-toolbar">
+        {Arrange}
         <div className="context-toolbar__group">
           <label>
             種類
@@ -227,6 +320,7 @@ export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Pro
     const maxTrimStartSec = assetDurationSec !== undefined ? Math.max(0, assetDurationSec - sceneDurationMs / 1000) : undefined;
     return (
       <div className="context-toolbar">
+        {Arrange}
         <div className="context-toolbar__group">
           <label>
             トリム開始(秒)
@@ -268,6 +362,7 @@ export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Pro
   if (layer.type === 'image') {
     return (
       <div className="context-toolbar">
+        {Arrange}
         <PhotoFilterControl filter={layer.filter} onChange={(f) => updateLayer(sceneId, layer.id, { filter: f })} />
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
         {DeleteButton}
@@ -281,6 +376,7 @@ export function ContextToolbar({ project, sceneId, sceneDurationMs, layer }: Pro
   const maxTrimStartSec = assetDurationSec !== undefined ? Math.max(0, assetDurationSec - sceneDurationMs / 1000) : undefined;
   return (
     <div className="context-toolbar">
+      {Arrange}
       <div className="context-toolbar__group">
         <label>
           種類

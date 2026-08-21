@@ -102,7 +102,7 @@ export function EditorView() {
         ))}
       </nav>
       <EditorToolbar />
-      <ContextToolbar project={project} sceneId={currentScene.id} sceneDurationMs={currentScene.duration} layer={selectedLayer} />
+      <ContextToolbar project={project} scene={currentScene} layer={selectedLayer} />
       <div className="editor__body">
         <div className="editor__center">
           <div className="editor__preview-area">
