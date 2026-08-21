@@ -3,8 +3,67 @@ import { createPortal } from 'react-dom';
 
 export interface MenubarMenuItem {
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
+  shortcut?: string;
+  items?: MenubarMenuItem[];
+  divider?: boolean;
+}
+
+interface PanelProps {
+  items: MenubarMenuItem[];
+  style: { left: number; top: number };
+  onRequestClose: () => void;
+}
+
+function MenuPanel({ items, style, onRequestClose }: PanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [openSubmenu, setOpenSubmenu] = useState<{ index: number; pos: { left: number; top: number } } | null>(null);
+
+  return createPortal(
+    <div className="menubar-dropdown__panel" ref={panelRef} style={style}>
+      {items.map((item, i) => {
+        if (item.divider) {
+          return <div key={`divider-${i}`} className="menubar-dropdown__divider" />;
+        }
+        if (item.items) {
+          return (
+            <div
+              key={item.label}
+              className="menubar-dropdown__submenu-row"
+              onMouseEnter={(e) => {
+                if (item.disabled) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                setOpenSubmenu({ index: i, pos: { left: rect.right, top: rect.top } });
+              }}
+            >
+              <button disabled={item.disabled}>
+                <span>{item.label}</span>
+                <span className="menubar-dropdown__arrow">▸</span>
+              </button>
+              {openSubmenu?.index === i && (
+                <MenuPanel items={item.items} style={openSubmenu.pos} onRequestClose={onRequestClose} />
+              )}
+            </div>
+          );
+        }
+        return (
+          <button
+            key={item.label}
+            disabled={item.disabled}
+            onClick={() => {
+              item.onClick?.();
+              onRequestClose();
+            }}
+          >
+            <span>{item.label}</span>
+            {item.shortcut && <span className="menubar-dropdown__shortcut">{item.shortcut}</span>}
+          </button>
+        );
+      })}
+    </div>,
+    document.body,
+  );
 }
 
 interface Props {
@@ -16,7 +75,7 @@ export function MenubarMenu({ label, items }: Props) {
   const [isOpen, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   function toggleOpen() {
     if (isOpen) {
@@ -30,20 +89,11 @@ export function MenubarMenu({ label, items }: Props) {
 
   useEffect(() => {
     if (!isOpen) return;
-    function handlePointerDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (buttonRef.current?.contains(target)) return;
-      if (panelRef.current && !panelRef.current.contains(target)) setOpen(false);
-    }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
-    window.addEventListener('mousedown', handlePointerDown);
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   return (
@@ -60,22 +110,18 @@ export function MenubarMenu({ label, items }: Props) {
       {isOpen &&
         menuPos &&
         createPortal(
-          <div className="menubar-dropdown__panel" ref={panelRef} style={{ left: menuPos.left, top: menuPos.top }}>
-            {items.map((item) => (
-              <button
-                key={item.label}
-                disabled={item.disabled}
-                onClick={() => {
-                  item.onClick();
-                  setOpen(false);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>,
+          <div
+            ref={backdropRef}
+            className="menubar-dropdown__backdrop"
+            onClick={() => setOpen(false)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setOpen(false);
+            }}
+          />,
           document.body,
         )}
+      {isOpen && menuPos && <MenuPanel items={items} style={menuPos} onRequestClose={() => setOpen(false)} />}
     </div>
   );
 }

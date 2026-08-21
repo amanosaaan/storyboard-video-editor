@@ -8,7 +8,7 @@ import {
 } from '../domain/arrange';
 import type { Layer, Project, Scene } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
-import { MenubarMenu } from './MenubarMenu';
+import { MenubarMenu, type MenubarMenuItem } from './MenubarMenu';
 
 interface Props {
   project: Project;
@@ -34,19 +34,49 @@ export function ArrangeMenu({ project, scene, layers }: Props) {
   const disabled = layers.length === 0;
   const singleOnly = layers.length !== 1;
 
-  const items = [
-    { label: '最前面へ移動', onClick: () => apply(bringToFrontPatches(scene.layers, layers)), disabled },
-    { label: '前面へ移動', onClick: () => step('forward'), disabled: disabled || singleOnly },
-    { label: '背面へ移動', onClick: () => step('backward'), disabled: disabled || singleOnly },
-    { label: '最背面へ移動', onClick: () => apply(sendToBackPatches(scene.layers, layers)), disabled },
-    { label: '左揃え', onClick: () => apply(alignPatches(project, layers, 'left')), disabled },
-    { label: '左右中央揃え', onClick: () => apply(alignPatches(project, layers, 'centerH')), disabled },
-    { label: '右揃え', onClick: () => apply(alignPatches(project, layers, 'right')), disabled },
-    { label: '上揃え', onClick: () => apply(alignPatches(project, layers, 'top')), disabled },
-    { label: '上下中央揃え', onClick: () => apply(alignPatches(project, layers, 'centerV')), disabled },
-    { label: '下揃え', onClick: () => apply(alignPatches(project, layers, 'bottom')), disabled },
-    { label: '反時計回りに回転', onClick: () => apply(rotatePatches(layers, -90)), disabled },
-    { label: '時計回りに回転', onClick: () => apply(rotatePatches(layers, 90)), disabled },
+  const items: MenubarMenuItem[] = [
+    {
+      label: '順序',
+      disabled,
+      items: [
+        { label: '最前面に移動', disabled, onClick: () => apply(bringToFrontPatches(scene.layers, layers)) },
+        { label: '前面へ移動', disabled: disabled || singleOnly, onClick: () => step('forward') },
+        { label: '背面へ移動', disabled: disabled || singleOnly, onClick: () => step('backward') },
+        { label: '最背面に移動', disabled, onClick: () => apply(sendToBackPatches(scene.layers, layers)) },
+      ],
+    },
+    {
+      label: '配置',
+      disabled,
+      items: [
+        { label: '左', disabled, onClick: () => apply(alignPatches(project, layers, 'left')) },
+        { label: '中央', disabled, onClick: () => apply(alignPatches(project, layers, 'centerH')) },
+        { label: '右', disabled, onClick: () => apply(alignPatches(project, layers, 'right')) },
+        { label: '上', disabled, onClick: () => apply(alignPatches(project, layers, 'top')) },
+        { label: '中央（縦）', disabled, onClick: () => apply(alignPatches(project, layers, 'centerV')) },
+        { label: '下', disabled, onClick: () => apply(alignPatches(project, layers, 'bottom')) },
+      ],
+    },
+    { label: '整列', disabled: true },
+    {
+      label: 'シーンの中央',
+      disabled,
+      onClick: () => {
+        apply(alignPatches(project, layers, 'centerH'));
+        apply(alignPatches(project, layers, 'centerV'));
+      },
+    },
+    {
+      label: '回転',
+      disabled,
+      items: [
+        { label: '反時計回りに回転', disabled, onClick: () => apply(rotatePatches(layers, -90)) },
+        { label: '時計回りに回転', disabled, onClick: () => apply(rotatePatches(layers, 90)) },
+      ],
+    },
+    { label: '', divider: true },
+    { label: 'グループ化', disabled: true, shortcut: 'Ctrl+Alt+G' },
+    { label: 'グループ化解除', disabled: true, shortcut: 'Ctrl+Alt+Shift+G' },
   ];
 
   return <MenubarMenu label="配置" items={items} />;
