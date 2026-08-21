@@ -139,6 +139,11 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
       ctx.font = `${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
       ctx.textAlign = layer.align;
       ctx.textBaseline = 'top';
+      if (layer.strokeColor) {
+        ctx.strokeStyle = layer.strokeColor;
+        ctx.lineWidth = layer.strokeWidth ?? 2;
+        ctx.lineJoin = 'round';
+      }
       const textX =
         layer.align === 'left'
           ? layer.x
@@ -147,7 +152,11 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
             : layer.x + layer.width / 2;
       const lineHeight = layer.fontSize * 1.25;
       const lines = layer.content.split('\n');
-      lines.forEach((line, i) => ctx.fillText(line, textX, layer.y + i * lineHeight, layer.width));
+      lines.forEach((line, i) => {
+        const lineY = layer.y + i * lineHeight;
+        if (layer.strokeColor) ctx.strokeText(line, textX, lineY, layer.width);
+        ctx.fillText(line, textX, lineY, layer.width);
+      });
       break;
     }
     case 'shape': {

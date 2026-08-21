@@ -7,7 +7,7 @@ const MAX_HISTORY = 100;
 
 interface EditorState {
   project: Project | null;
-  selectedLayerId: string | null;
+  selectedLayerIds: string[];
   past: Project[];
   future: Project[];
 
@@ -27,7 +27,7 @@ interface EditorState {
   addLayerToScene: (sceneId: string, layer: Layer) => void;
   updateLayer: (sceneId: string, layerId: string, patch: Partial<Layer>) => void;
   removeLayer: (sceneId: string, layerId: string) => void;
-  selectLayer: (layerId: string | null) => void;
+  selectLayer: (layerId: string | null, options?: { additive?: boolean }) => void;
 
   renameProject: (name: string) => void;
   setAspectRatio: (ratio: AspectRatio) => void;
@@ -57,13 +57,13 @@ export const useProjectStore = create<EditorState>((set, get) => {
 
   return {
     project: null,
-    selectedLayerId: null,
+    selectedLayerIds: [],
     past: [],
     future: [],
 
-    loadProject: (project) => set({ project, selectedLayerId: null, past: [], future: [] }),
+    loadProject: (project) => set({ project, selectedLayerIds: [], past: [], future: [] }),
 
-    closeProject: () => set({ project: null, selectedLayerId: null, past: [], future: [] }),
+    closeProject: () => set({ project: null, selectedLayerIds: [], past: [], future: [] }),
 
     addScene: () => {
       const state = get();
@@ -71,7 +71,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
       const scene = emptyScene();
       commit(
         { ...state.project, scenes: [...state.project.scenes, scene], ...touch() },
-        { selectedLayerId: null },
+        { selectedLayerIds: [] },
       );
       return scene.id;
     },
@@ -81,7 +81,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
       if (!state.project) return;
       const scenes = state.project.scenes.filter((s) => s.id !== sceneId);
       if (scenes.length === 0) scenes.push(emptyScene());
-      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: null });
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerIds: [] });
     },
 
     duplicateScene: (sceneId) => {
@@ -97,7 +97,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
       };
       const scenes = [...state.project.scenes];
       scenes.splice(index + 1, 0, copy);
-      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: null });
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerIds: [] });
       return copy.id;
     },
 
@@ -154,7 +154,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
       const scenes = state.project.scenes.map((s) =>
         s.id === sceneId ? { ...s, layers: [...s.layers, layer] } : s,
       );
-      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: layer.id });
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerIds: [layer.id] });
     },
 
     updateLayer: (sceneId, layerId, patch) => {
@@ -177,11 +177,23 @@ export const useProjectStore = create<EditorState>((set, get) => {
       const scenes = state.project.scenes.map((s) =>
         s.id !== sceneId ? s : { ...s, layers: s.layers.filter((l) => l.id !== layerId) },
       );
-      const selectedLayerId = state.selectedLayerId === layerId ? null : state.selectedLayerId;
-      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId });
+      const selectedLayerIds = state.selectedLayerIds.filter((id) => id !== layerId);
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerIds });
     },
 
-    selectLayer: (layerId) => set({ selectedLayerId: layerId }),
+    selectLayer: (layerId, options) =>
+      set((state) => {
+        if (layerId === null) return { selectedLayerIds: [] };
+        if (options?.additive) {
+          const exists = state.selectedLayerIds.includes(layerId);
+          return {
+            selectedLayerIds: exists
+              ? state.selectedLayerIds.filter((id) => id !== layerId)
+              : [...state.selectedLayerIds, layerId],
+          };
+        }
+        return { selectedLayerIds: [layerId] };
+      }),
 
     renameProject: (name) => {
       const state = get();
@@ -206,7 +218,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
         const previous = state.past[state.past.length - 1];
         const past = state.past.slice(0, -1);
         const future = [state.project, ...state.future].slice(0, MAX_HISTORY);
-        return { project: previous, past, future, selectedLayerId: null };
+        return { project: previous, past, future, selectedLayerIds: [] };
       }),
 
     redo: () =>
@@ -215,7 +227,7 @@ export const useProjectStore = create<EditorState>((set, get) => {
         const next = state.future[0];
         const future = state.future.slice(1);
         const past = [...state.past, state.project].slice(-MAX_HISTORY);
-        return { project: next, past, future, selectedLayerId: null };
+        return { project: next, past, future, selectedLayerIds: [] };
       }),
   };
 });

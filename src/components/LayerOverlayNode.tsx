@@ -7,7 +7,7 @@ interface Props {
   layer: Layer;
   scale: number;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
   onChange: (patch: { x: number; y: number; width: number; height: number; rotation: number }) => void;
 }
 
@@ -46,8 +46,8 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange 
         strokeWidth={isSelected ? 2 : 1}
         dash={isSelected ? undefined : [4, 4]}
         draggable
-        onClick={onSelect}
-        onTap={onSelect}
+        onClick={(e) => onSelect(e.evt.shiftKey)}
+        onTap={(e) => onSelect('shiftKey' in e.evt && e.evt.shiftKey)}
         onDragEnd={(e) => {
           const node = e.target;
           onChange({

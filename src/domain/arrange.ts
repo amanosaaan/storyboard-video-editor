@@ -33,6 +33,34 @@ export function rotatePatch(layer: Layer, deltaDeg: number): Partial<Layer> {
   return { rotation: (((layer.rotation + deltaDeg) % 360) + 360) % 360 };
 }
 
+export interface LayerPatch {
+  id: string;
+  patch: Partial<Layer>;
+}
+
+/** 選択中の複数レイヤーをまとめて最前面へ。相対的な重なり順は保持する */
+export function bringToFrontPatches(allLayers: Layer[], targets: Layer[]): LayerPatch[] {
+  let z = Math.max(...allLayers.map((l) => l.zIndex));
+  return targets.map((l) => ({ id: l.id, patch: { zIndex: ++z } }));
+}
+
+/** 選択中の複数レイヤーをまとめて最背面へ。相対的な重なり順は保持する */
+export function sendToBackPatches(allLayers: Layer[], targets: Layer[]): LayerPatch[] {
+  let z = Math.min(...allLayers.map((l) => l.zIndex));
+  return [...targets]
+    .reverse()
+    .map((l) => ({ id: l.id, patch: { zIndex: --z } }))
+    .reverse();
+}
+
+export function alignPatches(project: Project, targets: Layer[], axis: AlignAxis): LayerPatch[] {
+  return targets.map((l) => ({ id: l.id, patch: alignPatch(project, l, axis) }));
+}
+
+export function rotatePatches(targets: Layer[], deltaDeg: number): LayerPatch[] {
+  return targets.map((l) => ({ id: l.id, patch: rotatePatch(l, deltaDeg) }));
+}
+
 export interface StepZIndexResult {
   targetPatch: Partial<Layer>;
   neighborId: string;

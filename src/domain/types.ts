@@ -62,6 +62,8 @@ export interface TextLayer extends BaseLayer {
   align: 'left' | 'center' | 'right';
   /** 字幕用の半透明背景ボックス（未指定なら背景なし） */
   backgroundColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
 }
 
 export interface ShapeLayer extends BaseLayer {

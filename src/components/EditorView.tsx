@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createCaptionLayer, createTextLayer } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
@@ -9,7 +10,10 @@ import { ContextToolbar } from './ContextToolbar';
 import { EditorToolbar } from './EditorToolbar';
 import { BackIcon } from './icons';
 import { Inspector } from './Inspector';
+import { MediaLibraryPanel } from './MediaLibraryPanel';
+import { MenubarMenu } from './MenubarMenu';
 import { PreviewPanel } from './PreviewPanel';
+import { RecordingPanel } from './RecordingPanel';
 import { StoryboardPanel } from './StoryboardPanel';
 
 export function EditorView() {
@@ -17,10 +21,13 @@ export function EditorView() {
   const closeProject = useProjectStore((s) => s.closeProject);
   const renameProject = useProjectStore((s) => s.renameProject);
   const selectLayer = useProjectStore((s) => s.selectLayer);
-  const selectedLayerId = useProjectStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
+  const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
+  const [isMediaOpen, setMediaOpen] = useState(false);
+  const [isRecordingOpen, setRecordingOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engine = useProjectPlaybackEngine(canvasRef, project);
   const currentSceneId = engine.position?.scene.id ?? null;
@@ -29,9 +36,22 @@ export function EditorView() {
     selectLayer(null);
   }, [currentSceneId, selectLayer]);
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.code !== 'Space') return;
+      const target = e.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName)) return;
+      e.preventDefault();
+      if (engine.isPlaying) engine.pause();
+      else engine.play();
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [engine]);
+
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
-  const selectedLayer = currentScene.layers.find((l) => l.id === selectedLayerId);
+  const selectedLayers = currentScene.layers.filter((l) => selectedLayerIds.includes(l.id));
 
   async function handleExport() {
     if (!project) return;
@@ -96,20 +116,36 @@ export function EditorView() {
         </button>
       </header>
       <nav className="editor__menubar">
-        {['ファイル', '編集', '表示', '挿入', '表示形式', 'シーン'].map((label) => (
-          <span key={label} className="editor__menubar-item" aria-hidden="true">
-            {label}
-          </span>
-        ))}
-        <ArrangeMenu project={project} scene={currentScene} layer={selectedLayer} />
-        {['ツール', 'ヘルプ'].map((label) => (
-          <span key={label} className="editor__menubar-item" aria-hidden="true">
-            {label}
-          </span>
-        ))}
+        <MenubarMenu label="ファイル" items={[{ label: '開く', onClick: () => setMediaOpen(true) }]} />
+        <span className="editor__menubar-item" aria-hidden="true">
+          編集
+        </span>
+        <span className="editor__menubar-item" aria-hidden="true">
+          表示
+        </span>
+        <MenubarMenu
+          label="挿入"
+          items={[
+            { label: 'テキスト', onClick: () => addLayerToScene(currentScene.id, createTextLayer(currentScene)) },
+            { label: '字幕', onClick: () => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene)) },
+          ]}
+        />
+        <span className="editor__menubar-item" aria-hidden="true">
+          表示形式
+        </span>
+        <span className="editor__menubar-item" aria-hidden="true">
+          シーン
+        </span>
+        <ArrangeMenu project={project} scene={currentScene} layers={selectedLayers} />
+        <span className="editor__menubar-item" aria-hidden="true">
+          ツール
+        </span>
+        <span className="editor__menubar-item" aria-hidden="true">
+          ヘルプ
+        </span>
       </nav>
       <EditorToolbar />
-      <ContextToolbar project={project} scene={currentScene} layer={selectedLayer} />
+      <ContextToolbar project={project} scene={currentScene} layers={selectedLayers} />
       <div className="editor__body">
         <div className="editor__center">
           <div className="editor__preview-area">
@@ -122,8 +158,15 @@ export function EditorView() {
             engine={engine}
           />
         </div>
-        <Inspector project={project} scene={currentScene} />
+        <Inspector
+          scene={currentScene}
+          onOpenMedia={() => setMediaOpen(true)}
+          onOpenRecording={() => setRecordingOpen(true)}
+          onAddCaption={() => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene))}
+        />
       </div>
+      {isMediaOpen && <MediaLibraryPanel project={project} targetSceneId={currentScene.id} onClose={() => setMediaOpen(false)} />}
+      {isRecordingOpen && <RecordingPanel project={project} onClose={() => setRecordingOpen(false)} />}
     </div>
   );
 }

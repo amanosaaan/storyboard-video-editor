@@ -1,4 +1,4 @@
-import { alignPatch, bringToFrontPatch, rotatePatch, sendToBackPatch } from '../domain/arrange';
+import { alignPatches, bringToFrontPatches, rotatePatches, sendToBackPatches, type LayerPatch } from '../domain/arrange';
 import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, Scene, ShapeLayer, TextLayer } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
@@ -16,60 +16,70 @@ import {
   TrashIcon,
 } from './icons';
 
-function ArrangeGroup({ project, scene, layer }: { project: Project; scene: Scene; layer: Layer }) {
+const FONT_OPTIONS = ['sans-serif', 'serif', 'monospace', 'Roboto', 'Noto Sans JP', 'Georgia', 'Impact', 'Courier New'];
+
+function ArrangeGroup({ project, scene, layers }: { project: Project; scene: Scene; layers: Layer[] }) {
   const updateLayer = useProjectStore((s) => s.updateLayer);
 
-  function bringToFront() {
-    updateLayer(scene.id, layer.id, bringToFrontPatch(scene.layers));
-  }
-
-  function sendToBack() {
-    updateLayer(scene.id, layer.id, sendToBackPatch(scene.layers));
-  }
-
-  function align(axis: 'left' | 'centerH' | 'right' | 'top' | 'centerV' | 'bottom') {
-    updateLayer(scene.id, layer.id, alignPatch(project, layer, axis));
-  }
-
-  function rotate(deltaDeg: number) {
-    updateLayer(scene.id, layer.id, rotatePatch(layer, deltaDeg));
+  function apply(results: LayerPatch[]) {
+    results.forEach(({ id, patch }) => updateLayer(scene.id, id, patch));
   }
 
   return (
     <div className="context-toolbar__group context-toolbar__group--arrange">
       <div className="context-toolbar__icon-row">
-        <button className="context-toolbar__icon-btn" title="最前面へ" onClick={bringToFront}>
+        <button
+          className="context-toolbar__icon-btn"
+          title="最前面へ"
+          onClick={() => apply(bringToFrontPatches(scene.layers, layers))}
+        >
           <BringToFrontIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="最背面へ" onClick={sendToBack}>
+        <button
+          className="context-toolbar__icon-btn"
+          title="最背面へ"
+          onClick={() => apply(sendToBackPatches(scene.layers, layers))}
+        >
           <SendToBackIcon />
         </button>
       </div>
       <div className="context-toolbar__icon-row">
-        <button className="context-toolbar__icon-btn" title="左揃え" onClick={() => align('left')}>
+        <button className="context-toolbar__icon-btn" title="左揃え" onClick={() => apply(alignPatches(project, layers, 'left'))}>
           <AlignLeftIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="左右中央" onClick={() => align('centerH')}>
+        <button
+          className="context-toolbar__icon-btn"
+          title="左右中央"
+          onClick={() => apply(alignPatches(project, layers, 'centerH'))}
+        >
           <AlignCenterHIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="右揃え" onClick={() => align('right')}>
+        <button className="context-toolbar__icon-btn" title="右揃え" onClick={() => apply(alignPatches(project, layers, 'right'))}>
           <AlignRightIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="上揃え" onClick={() => align('top')}>
+        <button className="context-toolbar__icon-btn" title="上揃え" onClick={() => apply(alignPatches(project, layers, 'top'))}>
           <AlignTopIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="上下中央" onClick={() => align('centerV')}>
+        <button
+          className="context-toolbar__icon-btn"
+          title="上下中央"
+          onClick={() => apply(alignPatches(project, layers, 'centerV'))}
+        >
           <AlignMiddleIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="下揃え" onClick={() => align('bottom')}>
+        <button
+          className="context-toolbar__icon-btn"
+          title="下揃え"
+          onClick={() => apply(alignPatches(project, layers, 'bottom'))}
+        >
           <AlignBottomIcon />
         </button>
       </div>
       <div className="context-toolbar__icon-row">
-        <button className="context-toolbar__icon-btn" title="反時計回りに90度回転" onClick={() => rotate(-90)}>
+        <button className="context-toolbar__icon-btn" title="反時計回りに90度回転" onClick={() => apply(rotatePatches(layers, -90))}>
           <RotateLeftIcon />
         </button>
-        <button className="context-toolbar__icon-btn" title="時計回りに90度回転" onClick={() => rotate(90)}>
+        <button className="context-toolbar__icon-btn" title="時計回りに90度回転" onClick={() => apply(rotatePatches(layers, 90))}>
           <RotateRightIcon />
         </button>
       </div>
@@ -186,18 +196,35 @@ function hexToRgba(hex: string, alpha: number): string {
 interface Props {
   project: Project;
   scene: Scene;
-  layer: Layer | undefined;
+  layers: Layer[];
 }
 
-export function ContextToolbar({ project, scene, layer }: Props) {
+export function ContextToolbar({ project, scene, layers }: Props) {
   const sceneId = scene.id;
   const sceneDurationMs = scene.duration;
   const updateLayer = useProjectStore((s) => s.updateLayer);
   const removeLayer = useProjectStore((s) => s.removeLayer);
 
-  if (!layer) return <div className="context-toolbar context-toolbar--empty" aria-hidden="true" />;
+  if (layers.length === 0) return <div className="context-toolbar context-toolbar--empty" aria-hidden="true" />;
 
-  const Arrange = <ArrangeGroup project={project} scene={scene} layer={layer} />;
+  if (layers.length > 1) {
+    return (
+      <div className="context-toolbar">
+        <ArrangeGroup project={project} scene={scene} layers={layers} />
+        <span className="context-toolbar__hint">{layers.length}個選択中</span>
+        <button
+          className="btn-icon context-toolbar__delete"
+          title="選択したレイヤーを削除"
+          onClick={() => layers.forEach((l) => removeLayer(sceneId, l.id))}
+        >
+          <TrashIcon />
+        </button>
+      </div>
+    );
+  }
+
+  const layer = layers[0];
+  const Arrange = <ArrangeGroup project={project} scene={scene} layers={layers} />;
 
   const DeleteButton = (
     <button className="btn-icon context-toolbar__delete" title="削除" onClick={() => removeLayer(sceneId, layer.id)}>
@@ -215,6 +242,19 @@ export function ContextToolbar({ project, scene, layer }: Props) {
           onChange={(e) => updateLayer(sceneId, layer.id, { content: e.target.value })}
         />
         <div className="context-toolbar__group">
+          <label>
+            フォント
+            <select
+              value={layer.fontFamily}
+              onChange={(e) => updateLayer(sceneId, layer.id, { fontFamily: e.target.value })}
+            >
+              {FONT_OPTIONS.map((f) => (
+                <option key={f} value={f} style={{ fontFamily: f }}>
+                  {f}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             サイズ
             <NumberField value={layer.fontSize} onChange={(v) => updateLayer(sceneId, layer.id, { fontSize: v })} min={1} />
@@ -234,6 +274,36 @@ export function ContextToolbar({ project, scene, layer }: Props) {
               <option value="right">右</option>
             </select>
           </label>
+        </div>
+        <div className="context-toolbar__group">
+          <label className="context-toolbar__checkbox">
+            <input
+              type="checkbox"
+              checked={!!layer.strokeColor}
+              onChange={(e) =>
+                updateLayer(sceneId, layer.id, {
+                  strokeColor: e.target.checked ? '#000000' : undefined,
+                  strokeWidth: e.target.checked ? (layer.strokeWidth ?? 2) : undefined,
+                })
+              }
+            />
+            文字のふちどり
+          </label>
+          {layer.strokeColor && (
+            <>
+              <input
+                type="color"
+                value={layer.strokeColor}
+                onChange={(e) => updateLayer(sceneId, layer.id, { strokeColor: e.target.value })}
+              />
+              <NumberField
+                min={1}
+                max={20}
+                value={layer.strokeWidth ?? 2}
+                onChange={(v) => updateLayer(sceneId, layer.id, { strokeWidth: v })}
+              />
+            </>
+          )}
         </div>
         <div className="context-toolbar__group">
           <label className="context-toolbar__checkbox">

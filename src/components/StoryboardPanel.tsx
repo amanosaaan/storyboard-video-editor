@@ -186,18 +186,18 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         <button className="btn-icon" onClick={engine.isPlaying ? engine.pause : engine.play} aria-label="再生">
           {engine.isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
-        <input
-          type="range"
-          min={0}
-          max={engine.totalDurationMs}
-          value={engine.currentTimeMs}
-          onChange={(e) => engine.seek(Number(e.target.value))}
-          style={{ width: 240 }}
-        />
         <span className="storyboard__time">
           {formatTime(engine.currentTimeMs)}s / {formatTime(engine.totalDurationMs)}s
         </span>
       </div>
+      <input
+        type="range"
+        className="storyboard__seekbar"
+        min={0}
+        max={engine.totalDurationMs}
+        value={engine.currentTimeMs}
+        onChange={(e) => engine.seek(Number(e.target.value))}
+      />
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={project.scenes.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
           <div className="storyboard__list">

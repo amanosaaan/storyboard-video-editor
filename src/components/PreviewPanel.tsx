@@ -17,7 +17,7 @@ interface Props {
 export function PreviewPanel({ project, canvasRef, engine }: Props) {
   const updateLayer = useProjectStore((s) => s.updateLayer);
   const selectLayer = useProjectStore((s) => s.selectLayer);
-  const selectedLayerId = useProjectStore((s) => s.selectedLayerId);
+  const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
 
   const scale = DISPLAY_WIDTH / project.resolution.width;
   const displayHeight = project.resolution.height * scale;
@@ -46,8 +46,8 @@ export function PreviewPanel({ project, canvasRef, engine }: Props) {
                   key={layer.id}
                   layer={layer}
                   scale={scale}
-                  isSelected={selectedLayerId === layer.id}
-                  onSelect={() => selectLayer(layer.id)}
+                  isSelected={selectedLayerIds.includes(layer.id)}
+                  onSelect={(additive) => selectLayer(layer.id, { additive })}
                   onChange={(patch) => scene && updateLayer(scene.id, layer.id, patch)}
                 />
               ))}

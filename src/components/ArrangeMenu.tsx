@@ -1,123 +1,53 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { alignPatch, bringToFrontPatch, rotatePatch, sendToBackPatch, stepZIndexPatches } from '../domain/arrange';
+import {
+  alignPatches,
+  bringToFrontPatches,
+  rotatePatches,
+  sendToBackPatches,
+  stepZIndexPatches,
+  type LayerPatch,
+} from '../domain/arrange';
 import type { Layer, Project, Scene } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
+import { MenubarMenu } from './MenubarMenu';
 
 interface Props {
   project: Project;
   scene: Scene;
-  layer: Layer | undefined;
+  layers: Layer[];
 }
 
-export function ArrangeMenu({ project, scene, layer }: Props) {
-  const [isOpen, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+export function ArrangeMenu({ project, scene, layers }: Props) {
   const updateLayer = useProjectStore((s) => s.updateLayer);
 
-  function toggleOpen() {
-    if (isOpen) {
-      setOpen(false);
-      return;
-    }
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) setMenuPos({ left: rect.left, top: rect.bottom });
-    setOpen(true);
-  }
-
-  useEffect(() => {
-    if (!isOpen) return;
-    function handlePointerDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (buttonRef.current?.contains(target)) return;
-      if (panelRef.current && !panelRef.current.contains(target)) setOpen(false);
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    window.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
-  function run(patch: Partial<Layer>) {
-    if (!layer) return;
-    updateLayer(scene.id, layer.id, patch);
-    setOpen(false);
+  function apply(results: LayerPatch[]) {
+    results.forEach(({ id, patch }) => updateLayer(scene.id, id, patch));
   }
 
   function step(direction: 'forward' | 'backward') {
-    if (!layer) return;
-    const result = stepZIndexPatches(scene.layers, layer, direction);
+    if (layers.length !== 1) return;
+    const result = stepZIndexPatches(scene.layers, layers[0], direction);
     if (!result) return;
-    updateLayer(scene.id, layer.id, result.targetPatch);
+    updateLayer(scene.id, layers[0].id, result.targetPatch);
     updateLayer(scene.id, result.neighborId, result.neighborPatch);
-    setOpen(false);
   }
 
-  const disabled = !layer;
+  const disabled = layers.length === 0;
+  const singleOnly = layers.length !== 1;
 
-  return (
-    <div className="menubar-dropdown">
-      <button
-        ref={buttonRef}
-        className="editor__menubar-item"
-        onClick={toggleOpen}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-      >
-        配置
-      </button>
-      {isOpen &&
-        menuPos &&
-        createPortal(
-          <div className="menubar-dropdown__panel" ref={panelRef} style={{ left: menuPos.left, top: menuPos.top }}>
-          <button disabled={disabled} onClick={() => run(bringToFrontPatch(scene.layers))}>
-            最前面へ移動
-          </button>
-          <button disabled={disabled} onClick={() => step('forward')}>
-            前面へ移動
-          </button>
-          <button disabled={disabled} onClick={() => step('backward')}>
-            背面へ移動
-          </button>
-          <button disabled={disabled} onClick={() => run(sendToBackPatch(scene.layers))}>
-            最背面へ移動
-          </button>
-          <div className="menubar-dropdown__divider" />
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'left'))}>
-            左揃え
-          </button>
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'centerH'))}>
-            左右中央揃え
-          </button>
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'right'))}>
-            右揃え
-          </button>
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'top'))}>
-            上揃え
-          </button>
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'centerV'))}>
-            上下中央揃え
-          </button>
-          <button disabled={disabled} onClick={() => layer && run(alignPatch(project, layer, 'bottom'))}>
-            下揃え
-          </button>
-          <div className="menubar-dropdown__divider" />
-          <button disabled={disabled} onClick={() => layer && run(rotatePatch(layer, -90))}>
-            反時計回りに回転
-          </button>
-            <button disabled={disabled} onClick={() => layer && run(rotatePatch(layer, 90))}>
-              時計回りに回転
-            </button>
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
+  const items = [
+    { label: '最前面へ移動', onClick: () => apply(bringToFrontPatches(scene.layers, layers)), disabled },
+    { label: '前面へ移動', onClick: () => step('forward'), disabled: disabled || singleOnly },
+    { label: '背面へ移動', onClick: () => step('backward'), disabled: disabled || singleOnly },
+    { label: '最背面へ移動', onClick: () => apply(sendToBackPatches(scene.layers, layers)), disabled },
+    { label: '左揃え', onClick: () => apply(alignPatches(project, layers, 'left')), disabled },
+    { label: '左右中央揃え', onClick: () => apply(alignPatches(project, layers, 'centerH')), disabled },
+    { label: '右揃え', onClick: () => apply(alignPatches(project, layers, 'right')), disabled },
+    { label: '上揃え', onClick: () => apply(alignPatches(project, layers, 'top')), disabled },
+    { label: '上下中央揃え', onClick: () => apply(alignPatches(project, layers, 'centerV')), disabled },
+    { label: '下揃え', onClick: () => apply(alignPatches(project, layers, 'bottom')), disabled },
+    { label: '反時計回りに回転', onClick: () => apply(rotatePatches(layers, -90)), disabled },
+    { label: '時計回りに回転', onClick: () => apply(rotatePatches(layers, 90)), disabled },
+  ];
+
+  return <MenubarMenu label="配置" items={items} />;
 }
