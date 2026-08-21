@@ -8,7 +8,7 @@ import { useProjectStore } from '../state/projectStore';
 import { ArrangeMenu } from './ArrangeMenu';
 import { ContextToolbar } from './ContextToolbar';
 import { EditorToolbar } from './EditorToolbar';
-import { BackIcon } from './icons';
+import { BackIcon, CaptionIcon, FolderOpenIcon, TextIcon } from './icons';
 import { Inspector } from './Inspector';
 import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { MenubarMenu } from './MenubarMenu';
@@ -116,7 +116,7 @@ export function EditorView() {
         </button>
       </header>
       <nav className="editor__menubar">
-        <MenubarMenu label="ファイル" items={[{ label: '開く', onClick: () => setMediaOpen(true) }]} />
+        <MenubarMenu label="ファイル" items={[{ label: '開く', icon: FolderOpenIcon, onClick: () => setMediaOpen(true) }]} />
         <span className="editor__menubar-item" aria-hidden="true">
           編集
         </span>
@@ -126,8 +126,12 @@ export function EditorView() {
         <MenubarMenu
           label="挿入"
           items={[
-            { label: 'テキスト', onClick: () => addLayerToScene(currentScene.id, createTextLayer(currentScene)) },
-            { label: '字幕', onClick: () => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene)) },
+            { label: 'テキスト', icon: TextIcon, onClick: () => addLayerToScene(currentScene.id, createTextLayer(currentScene)) },
+            {
+              label: '字幕',
+              icon: CaptionIcon,
+              onClick: () => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene)),
+            },
           ]}
         />
         <span className="editor__menubar-item" aria-hidden="true">

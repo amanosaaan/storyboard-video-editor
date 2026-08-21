@@ -81,6 +81,26 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange 
           ref={trRef}
           rotateEnabled
           flipEnabled={false}
+          borderStroke="#1a73e8"
+          borderStrokeWidth={2}
+          anchorSize={10}
+          anchorCornerRadius={5}
+          anchorFill="#ffffff"
+          anchorStroke="#1a73e8"
+          anchorStrokeWidth={2}
+          rotateAnchorOffset={28}
+          anchorStyleFunc={(anchorNode) => {
+            if (anchorNode.hasName('rotater')) {
+              anchorNode.fill('#1a73e8');
+              anchorNode.stroke('#ffffff');
+              anchorNode.strokeWidth(2);
+              anchorNode.width(20);
+              anchorNode.height(20);
+              anchorNode.offsetX(10);
+              anchorNode.offsetY(10);
+              anchorNode.cornerRadius(10);
+            }
+          }}
           boundBoxFunc={(oldBox, newBox) =>
             newBox.width < MIN_SIZE || newBox.height < MIN_SIZE ? oldBox : newBox
           }

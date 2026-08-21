@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { ComponentType } from 'react';
 
 export interface MenubarMenuItem {
   label: string;
+  icon?: ComponentType<{ size?: number }>;
   onClick?: () => void;
   disabled?: boolean;
   shortcut?: string;
@@ -38,7 +40,10 @@ function MenuPanel({ items, style, onRequestClose }: PanelProps) {
               }}
             >
               <button disabled={item.disabled}>
-                <span>{item.label}</span>
+                <span className="menubar-dropdown__label">
+                  {item.icon && <item.icon size={16} />}
+                  <span>{item.label}</span>
+                </span>
                 <span className="menubar-dropdown__arrow">▸</span>
               </button>
               {openSubmenu?.index === i && (
@@ -56,7 +61,10 @@ function MenuPanel({ items, style, onRequestClose }: PanelProps) {
               onRequestClose();
             }}
           >
-            <span>{item.label}</span>
+            <span className="menubar-dropdown__label">
+              {item.icon && <item.icon size={16} />}
+              <span>{item.label}</span>
+            </span>
             {item.shortcut && <span className="menubar-dropdown__shortcut">{item.shortcut}</span>}
           </button>
         );

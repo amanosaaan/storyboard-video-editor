@@ -1,13 +1,24 @@
 import {
+  AlignCenter,
+  AlignHorizontalDistributeCenter,
   AlignHorizontalJustifyCenter,
   AlignHorizontalJustifyEnd,
   AlignHorizontalJustifyStart,
+  AlignLeft,
+  AlignRight,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
   ArrowLeft,
   BringToFront,
   Captions,
+  ChevronDown,
+  ChevronUp,
+  Focus,
+  FolderOpen,
+  Group,
+  Layers,
+  Minus,
   MousePointer2,
   Palette,
   Pause,
@@ -24,6 +35,7 @@ import {
   Type,
   Undo2,
   Redo2,
+  Ungroup,
   Upload,
   Video,
   X,
@@ -64,3 +76,15 @@ export const AlignMiddleIcon = icon(AlignVerticalJustifyCenter);
 export const AlignBottomIcon = icon(AlignVerticalJustifyEnd);
 export const RotateLeftIcon = icon(RotateCcw);
 export const RotateRightIcon = icon(RotateCw);
+export const LayersIcon = icon(Layers);
+export const GroupIcon = icon(Group);
+export const UngroupIcon = icon(Ungroup);
+export const FocusIcon = icon(Focus);
+export const FolderOpenIcon = icon(FolderOpen);
+export const DistributeIcon = icon(AlignHorizontalDistributeCenter);
+export const ChevronUpIcon = icon(ChevronUp);
+export const ChevronDownIcon = icon(ChevronDown);
+export const MinusIcon = icon(Minus);
+export const TextAlignLeftIcon = icon(AlignLeft);
+export const TextAlignCenterIcon = icon(AlignCenter);
+export const TextAlignRightIcon = icon(AlignRight);

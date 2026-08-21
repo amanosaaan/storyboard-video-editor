@@ -1,5 +1,5 @@
 import { alignPatches, bringToFrontPatches, rotatePatches, sendToBackPatches, type LayerPatch } from '../domain/arrange';
-import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, Scene, ShapeLayer, TextLayer } from '../domain/types';
+import type { AnimationConfig, AudioLayer, Layer, PhotoFilter, Project, Scene, ShapeLayer } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
 import {
@@ -10,9 +10,14 @@ import {
   AlignRightIcon,
   AlignTopIcon,
   BringToFrontIcon,
+  MinusIcon,
+  PlusIcon,
   RotateLeftIcon,
   RotateRightIcon,
   SendToBackIcon,
+  TextAlignCenterIcon,
+  TextAlignLeftIcon,
+  TextAlignRightIcon,
   TrashIcon,
 } from './icons';
 
@@ -255,25 +260,53 @@ export function ContextToolbar({ project, scene, layers }: Props) {
               ))}
             </select>
           </label>
-          <label>
-            サイズ
-            <NumberField value={layer.fontSize} onChange={(v) => updateLayer(sceneId, layer.id, { fontSize: v })} min={1} />
-          </label>
-          <label>
-            色
-            <input type="color" value={layer.color} onChange={(e) => updateLayer(sceneId, layer.id, { color: e.target.value })} />
-          </label>
-          <label>
-            配置
-            <select
-              value={layer.align}
-              onChange={(e) => updateLayer(sceneId, layer.id, { align: e.target.value as TextLayer['align'] })}
+          <div className="context-toolbar__stepper">
+            <button
+              className="context-toolbar__icon-btn"
+              title="小さく"
+              onClick={() => updateLayer(sceneId, layer.id, { fontSize: Math.max(1, layer.fontSize - 2) })}
             >
-              <option value="left">左</option>
-              <option value="center">中央</option>
-              <option value="right">右</option>
-            </select>
-          </label>
+              <MinusIcon size={14} />
+            </button>
+            <NumberField value={layer.fontSize} onChange={(v) => updateLayer(sceneId, layer.id, { fontSize: v })} min={1} />
+            <button
+              className="context-toolbar__icon-btn"
+              title="大きく"
+              onClick={() => updateLayer(sceneId, layer.id, { fontSize: layer.fontSize + 2 })}
+            >
+              <PlusIcon size={14} />
+            </button>
+          </div>
+          <input
+            className="context-toolbar__swatch"
+            type="color"
+            title="文字色"
+            value={layer.color}
+            onChange={(e) => updateLayer(sceneId, layer.id, { color: e.target.value })}
+          />
+          <div className="context-toolbar__segmented">
+            <button
+              className={layer.align === 'left' ? 'is-active' : ''}
+              title="左揃え"
+              onClick={() => updateLayer(sceneId, layer.id, { align: 'left' })}
+            >
+              <TextAlignLeftIcon size={16} />
+            </button>
+            <button
+              className={layer.align === 'center' ? 'is-active' : ''}
+              title="中央揃え"
+              onClick={() => updateLayer(sceneId, layer.id, { align: 'center' })}
+            >
+              <TextAlignCenterIcon size={16} />
+            </button>
+            <button
+              className={layer.align === 'right' ? 'is-active' : ''}
+              title="右揃え"
+              onClick={() => updateLayer(sceneId, layer.id, { align: 'right' })}
+            >
+              <TextAlignRightIcon size={16} />
+            </button>
+          </div>
         </div>
         <div className="context-toolbar__group">
           <label className="context-toolbar__checkbox">

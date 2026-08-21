@@ -374,6 +374,18 @@ button.editor__menubar-item[aria-expanded='true'] {
   position: relative;
 }
 
+.menubar-dropdown__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+}
+
+.menubar-dropdown__label svg {
+  color: var(--text);
+  flex: none;
+}
+
 .menubar-dropdown__arrow {
   color: var(--text);
   font-size: 11px;
@@ -524,6 +536,65 @@ button.editor__menubar-item[aria-expanded='true'] {
 
 .context-toolbar__icon-btn:hover {
   background: var(--bg-hover);
+}
+
+.context-toolbar__stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-app);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.context-toolbar__stepper input {
+  width: 34px;
+  text-align: center;
+  border: none;
+  background: transparent;
+}
+
+.context-toolbar__stepper input::-webkit-outer-spin-button,
+.context-toolbar__stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.context-toolbar__swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  flex: none;
+}
+
+.context-toolbar__segmented {
+  display: flex;
+  background: var(--bg-app);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.context-toolbar__segmented button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-h);
+}
+
+.context-toolbar__segmented button.is-active {
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  color: var(--accent);
 }
 
 .context-toolbar__delete {
