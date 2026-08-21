@@ -309,6 +309,53 @@ label {
   overflow: hidden;
 }
 
+.editor__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.editor__tools-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-h);
+}
+
+.editor__tools-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.editor__tools-btn:disabled {
+  color: var(--text);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.editor__tools-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.editor__tools-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+  flex: none;
+}
+
 /* Context toolbar (properties for the selected layer) */
 .context-toolbar {
   display: flex;

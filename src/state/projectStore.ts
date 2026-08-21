@@ -3,9 +3,13 @@ import { create } from 'zustand';
 import type { AspectRatio, Layer, MediaAsset, Project, Scene } from '../domain/types';
 import { ASPECT_RATIO_RESOLUTIONS } from '../domain/types';
 
+const MAX_HISTORY = 100;
+
 interface EditorState {
   project: Project | null;
   selectedLayerId: string | null;
+  past: Project[];
+  future: Project[];
 
   loadProject: (project: Project) => void;
   closeProject: () => void;
@@ -27,6 +31,9 @@ interface EditorState {
 
   renameProject: (name: string) => void;
   setAspectRatio: (ratio: AspectRatio) => void;
+
+  undo: () => void;
+  redo: () => void;
 }
 
 function touch(): Pick<Project, 'updatedAt'> {
@@ -37,92 +44,100 @@ function emptyScene(): Scene {
   return { id: nanoid(), duration: 5000, layers: [] };
 }
 
-export const useProjectStore = create<EditorState>((set, get) => ({
-  project: null,
-  selectedLayerId: null,
+export const useProjectStore = create<EditorState>((set, get) => {
+  /** すべての変更系アクションはこれを経由する。変更前の project を past に積み、future をクリアする。 */
+  function commit(project: Project, extra?: Partial<EditorState>) {
+    set((state) => ({
+      project,
+      past: state.project ? [...state.past, state.project].slice(-MAX_HISTORY) : state.past,
+      future: [],
+      ...extra,
+    }));
+  }
 
-  loadProject: (project) => set({ project, selectedLayerId: null }),
+  return {
+    project: null,
+    selectedLayerId: null,
+    past: [],
+    future: [],
 
-  closeProject: () => set({ project: null, selectedLayerId: null }),
+    loadProject: (project) => set({ project, selectedLayerId: null, past: [], future: [] }),
 
-  addScene: () => {
-    const state = get();
-    if (!state.project) return null;
-    const scene = emptyScene();
-    set({
-      project: { ...state.project, scenes: [...state.project.scenes, scene], ...touch() },
-      selectedLayerId: null,
-    });
-    return scene.id;
-  },
+    closeProject: () => set({ project: null, selectedLayerId: null, past: [], future: [] }),
 
-  removeScene: (sceneId) =>
-    set((state) => {
-      if (!state.project) return state;
+    addScene: () => {
+      const state = get();
+      if (!state.project) return null;
+      const scene = emptyScene();
+      commit(
+        { ...state.project, scenes: [...state.project.scenes, scene], ...touch() },
+        { selectedLayerId: null },
+      );
+      return scene.id;
+    },
+
+    removeScene: (sceneId) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.filter((s) => s.id !== sceneId);
       if (scenes.length === 0) scenes.push(emptyScene());
-      const project = { ...state.project, scenes, ...touch() };
-      return { project, selectedLayerId: null };
-    }),
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: null });
+    },
 
-  duplicateScene: (sceneId) => {
-    const state = get();
-    if (!state.project) return null;
-    const index = state.project.scenes.findIndex((s) => s.id === sceneId);
-    if (index === -1) return null;
-    const original = state.project.scenes[index];
-    const copy: Scene = {
-      ...original,
-      id: nanoid(),
-      layers: original.layers.map((l) => ({ ...l, id: nanoid() })),
-    };
-    const scenes = [...state.project.scenes];
-    scenes.splice(index + 1, 0, copy);
-    set({ project: { ...state.project, scenes, ...touch() }, selectedLayerId: null });
-    return copy.id;
-  },
+    duplicateScene: (sceneId) => {
+      const state = get();
+      if (!state.project) return null;
+      const index = state.project.scenes.findIndex((s) => s.id === sceneId);
+      if (index === -1) return null;
+      const original = state.project.scenes[index];
+      const copy: Scene = {
+        ...original,
+        id: nanoid(),
+        layers: original.layers.map((l) => ({ ...l, id: nanoid() })),
+      };
+      const scenes = [...state.project.scenes];
+      scenes.splice(index + 1, 0, copy);
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: null });
+      return copy.id;
+    },
 
-  reorderScenes: (fromIndex, toIndex) =>
-    set((state) => {
-      if (!state.project) return state;
+    reorderScenes: (fromIndex, toIndex) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = [...state.project.scenes];
       const [moved] = scenes.splice(fromIndex, 1);
       scenes.splice(toIndex, 0, moved);
-      const project = { ...state.project, scenes, ...touch() };
-      return { project };
-    }),
+      commit({ ...state.project, scenes, ...touch() });
+    },
 
-  updateSceneDuration: (sceneId, duration) =>
-    set((state) => {
-      if (!state.project) return state;
+    updateSceneDuration: (sceneId, duration) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.map((s) => (s.id === sceneId ? { ...s, duration } : s));
-      const project = { ...state.project, scenes, ...touch() };
-      return { project };
-    }),
+      commit({ ...state.project, scenes, ...touch() });
+    },
 
-  updateScene: (sceneId, patch) =>
-    set((state) => {
-      if (!state.project) return state;
+    updateScene: (sceneId, patch) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.map((s) => (s.id === sceneId ? { ...s, ...patch } : s));
-      const project = { ...state.project, scenes, ...touch() };
-      return { project };
-    }),
+      commit({ ...state.project, scenes, ...touch() });
+    },
 
-  addMediaAsset: (asset) =>
-    set((state) => {
-      if (!state.project) return state;
-      const project = {
+    addMediaAsset: (asset) => {
+      const state = get();
+      if (!state.project) return;
+      commit({
         ...state.project,
         mediaLibrary: [...state.project.mediaLibrary, asset],
         ...touch(),
-      };
-      return { project };
-    }),
+      });
+    },
 
-  removeMediaAsset: (mediaId) =>
-    set((state) => {
-      if (!state.project) return state;
-      const project = {
+    removeMediaAsset: (mediaId) => {
+      const state = get();
+      if (!state.project) return;
+      commit({
         ...state.project,
         mediaLibrary: state.project.mediaLibrary.filter((m) => m.id !== mediaId),
         scenes: state.project.scenes.map((s) => ({
@@ -130,23 +145,21 @@ export const useProjectStore = create<EditorState>((set, get) => ({
           layers: s.layers.filter((l) => !('mediaId' in l) || l.mediaId !== mediaId),
         })),
         ...touch(),
-      };
-      return { project };
-    }),
+      });
+    },
 
-  addLayerToScene: (sceneId, layer) =>
-    set((state) => {
-      if (!state.project) return state;
+    addLayerToScene: (sceneId, layer) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.map((s) =>
         s.id === sceneId ? { ...s, layers: [...s.layers, layer] } : s,
       );
-      const project = { ...state.project, scenes, ...touch() };
-      return { project, selectedLayerId: layer.id };
-    }),
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId: layer.id });
+    },
 
-  updateLayer: (sceneId, layerId, patch) =>
-    set((state) => {
-      if (!state.project) return state;
+    updateLayer: (sceneId, layerId, patch) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.map((s) =>
         s.id !== sceneId
           ? s
@@ -155,39 +168,54 @@ export const useProjectStore = create<EditorState>((set, get) => ({
               layers: s.layers.map((l) => (l.id === layerId ? ({ ...l, ...patch } as Layer) : l)),
             },
       );
-      const project = { ...state.project, scenes, ...touch() };
-      return { project };
-    }),
+      commit({ ...state.project, scenes, ...touch() });
+    },
 
-  removeLayer: (sceneId, layerId) =>
-    set((state) => {
-      if (!state.project) return state;
+    removeLayer: (sceneId, layerId) => {
+      const state = get();
+      if (!state.project) return;
       const scenes = state.project.scenes.map((s) =>
         s.id !== sceneId ? s : { ...s, layers: s.layers.filter((l) => l.id !== layerId) },
       );
-      const project = { ...state.project, scenes, ...touch() };
-      const selectedLayerId = get().selectedLayerId === layerId ? null : get().selectedLayerId;
-      return { project, selectedLayerId };
-    }),
+      const selectedLayerId = state.selectedLayerId === layerId ? null : state.selectedLayerId;
+      commit({ ...state.project, scenes, ...touch() }, { selectedLayerId });
+    },
 
-  selectLayer: (layerId) => set({ selectedLayerId: layerId }),
+    selectLayer: (layerId) => set({ selectedLayerId: layerId }),
 
-  renameProject: (name) =>
-    set((state) => {
-      if (!state.project) return state;
-      return { project: { ...state.project, name, ...touch() } };
-    }),
+    renameProject: (name) => {
+      const state = get();
+      if (!state.project) return;
+      commit({ ...state.project, name, ...touch() });
+    },
 
-  setAspectRatio: (aspectRatio) =>
-    set((state) => {
-      if (!state.project) return state;
-      return {
-        project: {
-          ...state.project,
-          aspectRatio,
-          resolution: ASPECT_RATIO_RESOLUTIONS[aspectRatio],
-          ...touch(),
-        },
-      };
-    }),
-}));
+    setAspectRatio: (aspectRatio) => {
+      const state = get();
+      if (!state.project) return;
+      commit({
+        ...state.project,
+        aspectRatio,
+        resolution: ASPECT_RATIO_RESOLUTIONS[aspectRatio],
+        ...touch(),
+      });
+    },
+
+    undo: () =>
+      set((state) => {
+        if (state.past.length === 0 || !state.project) return state;
+        const previous = state.past[state.past.length - 1];
+        const past = state.past.slice(0, -1);
+        const future = [state.project, ...state.future].slice(0, MAX_HISTORY);
+        return { project: previous, past, future, selectedLayerId: null };
+      }),
+
+    redo: () =>
+      set((state) => {
+        if (state.future.length === 0 || !state.project) return state;
+        const next = state.future[0];
+        const future = state.future.slice(1);
+        const past = [...state.past, state.project].slice(-MAX_HISTORY);
+        return { project: next, past, future, selectedLayerId: null };
+      }),
+  };
+});

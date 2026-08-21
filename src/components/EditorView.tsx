@@ -5,6 +5,7 @@ import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine'
 import { exportProjectFile } from '../storage/projectPortability';
 import { useProjectStore } from '../state/projectStore';
 import { ContextToolbar } from './ContextToolbar';
+import { EditorToolbar } from './EditorToolbar';
 import { BackIcon } from './icons';
 import { Inspector } from './Inspector';
 import { PreviewPanel } from './PreviewPanel';
@@ -100,6 +101,7 @@ export function EditorView() {
           </span>
         ))}
       </nav>
+      <EditorToolbar />
       <ContextToolbar project={project} sceneId={currentScene.id} sceneDurationMs={currentScene.duration} layer={selectedLayer} />
       <div className="editor__body">
         <div className="editor__center">
