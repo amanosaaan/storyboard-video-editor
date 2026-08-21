@@ -1,51 +1,66 @@
-import type { CSSProperties, HTMLAttributes } from 'react';
+import {
+  AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd,
+  AlignHorizontalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
+  ArrowLeft,
+  BringToFront,
+  Captions,
+  MousePointer2,
+  Palette,
+  Pause,
+  Pen,
+  Play,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Search,
+  SendToBack,
+  Shapes,
+  Square,
+  Trash2,
+  Type,
+  Undo2,
+  Redo2,
+  Upload,
+  Video,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 
-interface EmojiIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
-}
-
-function emoji(symbol: string) {
-  return function EmojiIcon({ size = 18, style, ...props }: EmojiIconProps) {
-    const merged: CSSProperties = {
-      fontSize: size,
-      lineHeight: 1,
-      display: 'inline-block',
-      fontStyle: 'normal',
-      ...style,
-    };
-    return (
-      <span role="img" aria-hidden="true" style={merged} {...props}>
-        {symbol}
-      </span>
-    );
+function icon(Lucide: LucideIcon) {
+  return function WrappedIcon({ size = 18 }: { size?: number }) {
+    return <Lucide size={size} strokeWidth={1.8} aria-hidden="true" />;
   };
 }
 
-export const UploadIcon = emoji('📤');
-export const RecordIcon = emoji('🎥');
-export const ShapeIcon = emoji('🔷');
-export const TextIcon = emoji('🔤');
-export const CaptionIcon = emoji('💬');
-export const PlusIcon = emoji('➕');
-export const CloseIcon = emoji('✕');
-export const BackIcon = emoji('←');
-export const PlayIcon = emoji('▶️');
-export const PauseIcon = emoji('⏸️');
-export const TrashIcon = emoji('🗑️');
-export const UndoIcon = emoji('↶');
-export const RedoIcon = emoji('↷');
-export const SearchIcon = emoji('🔍');
-export const CursorIcon = emoji('👆');
-export const FrameIcon = emoji('▭');
-export const PaletteIcon = emoji('🎨');
-export const PenIcon = emoji('✏️');
-export const BringToFrontIcon = emoji('⏫');
-export const SendToBackIcon = emoji('⏬');
-export const AlignLeftIcon = emoji('⇤');
-export const AlignCenterHIcon = emoji('↔');
-export const AlignRightIcon = emoji('⇥');
-export const AlignTopIcon = emoji('⤒');
-export const AlignMiddleIcon = emoji('↕');
-export const AlignBottomIcon = emoji('⤓');
-export const RotateLeftIcon = emoji('↺');
-export const RotateRightIcon = emoji('↻');
+export const UploadIcon = icon(Upload);
+export const RecordIcon = icon(Video);
+export const ShapeIcon = icon(Shapes);
+export const TextIcon = icon(Type);
+export const CaptionIcon = icon(Captions);
+export const PlusIcon = icon(Plus);
+export const CloseIcon = icon(X);
+export const BackIcon = icon(ArrowLeft);
+export const PlayIcon = icon(Play);
+export const PauseIcon = icon(Pause);
+export const TrashIcon = icon(Trash2);
+export const UndoIcon = icon(Undo2);
+export const RedoIcon = icon(Redo2);
+export const SearchIcon = icon(Search);
+export const CursorIcon = icon(MousePointer2);
+export const FrameIcon = icon(Square);
+export const PaletteIcon = icon(Palette);
+export const PenIcon = icon(Pen);
+export const BringToFrontIcon = icon(BringToFront);
+export const SendToBackIcon = icon(SendToBack);
+export const AlignLeftIcon = icon(AlignHorizontalJustifyStart);
+export const AlignCenterHIcon = icon(AlignHorizontalJustifyCenter);
+export const AlignRightIcon = icon(AlignHorizontalJustifyEnd);
+export const AlignTopIcon = icon(AlignVerticalJustifyStart);
+export const AlignMiddleIcon = icon(AlignVerticalJustifyCenter);
+export const AlignBottomIcon = icon(AlignVerticalJustifyEnd);
+export const RotateLeftIcon = icon(RotateCcw);
+export const RotateRightIcon = icon(RotateCw);

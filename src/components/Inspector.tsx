@@ -61,23 +61,23 @@ export function Inspector({ scene, onOpenMedia, onOpenRecording, onAddCaption }:
       <div className="inspector__section">
         <div className="insert-rail">
           <button className="insert-rail__button" onClick={onOpenMedia}>
-            <UploadIcon />
+            <UploadIcon size={20} />
             <span>アップロード</span>
           </button>
           <button className="insert-rail__button" onClick={onOpenRecording}>
-            <RecordIcon />
+            <RecordIcon size={20} />
             <span>録画</span>
           </button>
           <button className="insert-rail__button" onClick={() => addLayerToScene(scene.id, createShapeLayer(scene))}>
-            <ShapeIcon />
+            <ShapeIcon size={20} />
             <span>図形</span>
           </button>
           <button className="insert-rail__button" onClick={() => addLayerToScene(scene.id, createTextLayer(scene))}>
-            <TextIcon />
+            <TextIcon size={20} />
             <span>テキスト</span>
           </button>
           <button className="insert-rail__button" onClick={onAddCaption}>
-            <CaptionIcon />
+            <CaptionIcon size={20} />
             <span>字幕</span>
           </button>
         </div>

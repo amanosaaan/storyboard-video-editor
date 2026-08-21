@@ -40,6 +40,11 @@
   box-sizing: border-box;
 }
 
+/* Lucideアイコンはボタン内でflexアイテムになると幅だけ潰れることがあるため、常に縮小させない */
+.lucide {
+  flex-shrink: 0;
+}
+
 body {
   margin: 0;
 }
@@ -555,11 +560,6 @@ button.editor__menubar-item[aria-expanded='true'] {
   color: var(--text-h);
   width: 100%;
   text-align: center;
-}
-
-.insert-rail__button span[role='img'] {
-  flex: none;
-  font-size: 20px;
 }
 
 .insert-rail__button:hover:not(:disabled) {
