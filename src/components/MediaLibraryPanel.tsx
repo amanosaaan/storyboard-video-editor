@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { nanoid } from 'nanoid';
-import type { AudioLayer, ImageLayer, MediaAsset, Project, VideoLayer } from '../domain/types';
+import { createImageLayerForScene, createVideoLayerForScene } from '../domain/layerFactory';
+import type { AudioLayer, MediaAsset, Project, Scene } from '../domain/types';
 import { addMediaFile, getThumbnailUrl } from '../storage/mediaRepository';
 import { useProjectStore } from '../state/projectStore';
 import { CloseIcon } from './icons';
 
 interface Props {
   project: Project;
-  targetSceneId: string;
+  scene: Scene;
   onClose: () => void;
 }
 
-export function MediaLibraryPanel({ project, targetSceneId, onClose }: Props) {
+export function MediaLibraryPanel({ project, scene, onClose }: Props) {
   const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
   const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
   const updateSceneDuration = useProjectStore((s) => s.updateSceneDuration);
@@ -50,27 +51,30 @@ export function MediaLibraryPanel({ project, targetSceneId, onClose }: Props) {
   }
 
   function placeOnScene(asset: MediaAsset) {
-    const base = {
-      id: nanoid(),
-      x: 0,
-      y: 0,
-      width: project.resolution.width,
-      height: project.resolution.height,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 0,
-    };
     if (asset.kind === 'video') {
-      const layer: VideoLayer = { ...base, type: 'video', mediaId: asset.id, trimStart: 0, volume: 1, muted: false };
-      addLayerToScene(targetSceneId, layer);
-      // Google Vids と同様、取り込んだ動画の長さにシーンの長さを合わせる。
-      if (asset.durationMs) updateSceneDuration(targetSceneId, asset.durationMs);
+      const { layer, isMain } = createVideoLayerForScene(project, scene, asset.id);
+      addLayerToScene(scene.id, layer);
+      // Google Vids と同様、シーンの主役となる動画を取り込んだ場合はシーンの長さを合わせる。
+      if (isMain && asset.durationMs) updateSceneDuration(scene.id, asset.durationMs);
     } else if (asset.kind === 'image') {
-      const layer: ImageLayer = { ...base, type: 'image', mediaId: asset.id };
-      addLayerToScene(targetSceneId, layer);
+      addLayerToScene(scene.id, createImageLayerForScene(project, scene, asset.id));
     } else {
-      const layer: AudioLayer = { ...base, type: 'audio', mediaId: asset.id, trimStart: 0, volume: 1, role: 'music' };
-      addLayerToScene(targetSceneId, layer);
+      const layer: AudioLayer = {
+        id: nanoid(),
+        type: 'audio',
+        mediaId: asset.id,
+        x: 0,
+        y: 0,
+        width: project.resolution.width,
+        height: project.resolution.height,
+        rotation: 0,
+        opacity: 1,
+        zIndex: scene.layers.length + 1,
+        trimStart: 0,
+        volume: 1,
+        role: 'music',
+      };
+      addLayerToScene(scene.id, layer);
     }
   }
 

@@ -17,6 +17,7 @@ import {
   Focus,
   FolderOpen,
   Group,
+  ImageIcon as LucideImageIcon,
   Layers,
   Minus,
   MousePointer2,
@@ -88,3 +89,4 @@ export const MinusIcon = icon(Minus);
 export const TextAlignLeftIcon = icon(AlignLeft);
 export const TextAlignCenterIcon = icon(AlignCenter);
 export const TextAlignRightIcon = icon(AlignRight);
+export const ImageIcon = icon(LucideImageIcon);

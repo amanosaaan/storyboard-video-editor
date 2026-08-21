@@ -50,6 +50,8 @@ export interface ImageLayer extends BaseLayer {
   type: 'image';
   mediaId: string;
   filter?: PhotoFilter;
+  /** 元画像に対するトリミング範囲。0〜1の割合で指定（未指定なら画像全体を表示） */
+  crop?: { x: number; y: number; width: number; height: number };
 }
 
 export interface TextLayer extends BaseLayer {

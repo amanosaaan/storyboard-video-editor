@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { createCaptionLayer, createTextLayer } from '../domain/layerFactory';
+import { createCaptionLayer, createImageLayerForScene, createTextLayer } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
+import { addMediaFile } from '../storage/mediaRepository';
 import { exportProjectFile } from '../storage/projectPortability';
 import { useProjectStore } from '../state/projectStore';
 import { ArrangeMenu } from './ArrangeMenu';
 import { ContextToolbar } from './ContextToolbar';
 import { EditorToolbar } from './EditorToolbar';
-import { BackIcon, CaptionIcon, FolderOpenIcon, TextIcon } from './icons';
+import { BackIcon, CaptionIcon, FolderOpenIcon, ImageIcon, TextIcon } from './icons';
 import { Inspector } from './Inspector';
 import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { MenubarMenu } from './MenubarMenu';
@@ -23,12 +24,14 @@ export function EditorView() {
   const selectLayer = useProjectStore((s) => s.selectLayer);
   const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
   const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
+  const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
   const [isMediaOpen, setMediaOpen] = useState(false);
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const engine = useProjectPlaybackEngine(canvasRef, project);
   const currentSceneId = engine.position?.scene.id ?? null;
 
@@ -52,6 +55,19 @@ export function EditorView() {
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
   const selectedLayers = currentScene.layers.filter((l) => selectedLayerIds.includes(l.id));
+
+  async function handleQuickInsertImages(files: FileList | null) {
+    if (!files || !project) return;
+    for (const file of Array.from(files)) {
+      try {
+        const asset = await addMediaFile(project.id, file);
+        addMediaAsset(asset);
+        addLayerToScene(currentScene.id, createImageLayerForScene(project, currentScene, asset.id));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
 
   async function handleExport() {
     if (!project) return;
@@ -132,6 +148,7 @@ export function EditorView() {
               icon: CaptionIcon,
               onClick: () => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene)),
             },
+            { label: '画像', icon: ImageIcon, onClick: () => imageInputRef.current?.click() },
           ]}
         />
         <span className="editor__menubar-item" aria-hidden="true">
@@ -167,9 +184,21 @@ export function EditorView() {
           onOpenMedia={() => setMediaOpen(true)}
           onOpenRecording={() => setRecordingOpen(true)}
           onAddCaption={() => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene))}
+          onQuickInsertImage={() => imageInputRef.current?.click()}
         />
       </div>
-      {isMediaOpen && <MediaLibraryPanel project={project} targetSceneId={currentScene.id} onClose={() => setMediaOpen(false)} />}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          void handleQuickInsertImages(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      {isMediaOpen && <MediaLibraryPanel project={project} scene={currentScene} onClose={() => setMediaOpen(false)} />}
       {isRecordingOpen && <RecordingPanel project={project} onClose={() => setRecordingOpen(false)} />}
     </div>
   );

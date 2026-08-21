@@ -125,7 +125,15 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
         if (layer.filter) {
           ctx.filter = `brightness(${layer.filter.brightness}%) contrast(${layer.filter.contrast}%)`;
         }
-        ctx.drawImage(el, layer.x, layer.y, layer.width, layer.height);
+        if (layer.type === 'image' && layer.crop && el instanceof HTMLImageElement) {
+          const sx = layer.crop.x * el.naturalWidth;
+          const sy = layer.crop.y * el.naturalHeight;
+          const sWidth = layer.crop.width * el.naturalWidth;
+          const sHeight = layer.crop.height * el.naturalHeight;
+          ctx.drawImage(el, sx, sy, sWidth, sHeight, layer.x, layer.y, layer.width, layer.height);
+        } else {
+          ctx.drawImage(el, layer.x, layer.y, layer.width, layer.height);
+        }
         if (layer.filter) ctx.filter = 'none';
       }
       break;

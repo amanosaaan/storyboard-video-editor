@@ -2,7 +2,7 @@ import { stepZIndexPatches } from '../domain/arrange';
 import { createShapeLayer, createTextLayer } from '../domain/layerFactory';
 import type { Layer, Scene } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
-import { CaptionIcon, RecordIcon, ShapeIcon, TextIcon, UploadIcon } from './icons';
+import { CaptionIcon, ImageIcon, RecordIcon, ShapeIcon, TextIcon, UploadIcon } from './icons';
 import { NumberField } from './NumberField';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onOpenMedia: () => void;
   onOpenRecording: () => void;
   onAddCaption: () => void;
+  onQuickInsertImage: () => void;
 }
 
 function layerLabel(layer: Layer): string {
@@ -27,7 +28,7 @@ function layerLabel(layer: Layer): string {
   }
 }
 
-export function Inspector({ scene, onOpenMedia, onOpenRecording, onAddCaption }: Props) {
+export function Inspector({ scene, onOpenMedia, onOpenRecording, onAddCaption, onQuickInsertImage }: Props) {
   const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
   const selectLayer = useProjectStore((s) => s.selectLayer);
   const updateLayer = useProjectStore((s) => s.updateLayer);
@@ -63,6 +64,10 @@ export function Inspector({ scene, onOpenMedia, onOpenRecording, onAddCaption }:
           <button className="insert-rail__button" onClick={onOpenMedia}>
             <UploadIcon size={20} />
             <span>アップロード</span>
+          </button>
+          <button className="insert-rail__button" onClick={onQuickInsertImage}>
+            <ImageIcon size={20} />
+            <span>画像</span>
           </button>
           <button className="insert-rail__button" onClick={onOpenRecording}>
             <RecordIcon size={20} />

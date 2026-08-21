@@ -179,6 +179,45 @@ function PhotoFilterControl({
   );
 }
 
+type Crop = { x: number; y: number; width: number; height: number };
+
+function CropControl({ crop, onChange }: { crop: Crop | undefined; onChange: (crop: Crop | undefined) => void }) {
+  const current = crop ?? { x: 0, y: 0, width: 1, height: 1 };
+
+  function set(patch: Partial<Crop>) {
+    onChange({ ...current, ...patch });
+  }
+
+  return (
+    <div className="context-toolbar__group">
+      <label className="context-toolbar__checkbox">
+        <input type="checkbox" checked={!!crop} onChange={(e) => onChange(e.target.checked ? current : undefined)} />
+        トリミング
+      </label>
+      {crop && (
+        <>
+          <label>
+            X(%)
+            <NumberField min={0} max={100} value={Math.round(current.x * 100)} onChange={(v) => set({ x: v / 100 })} />
+          </label>
+          <label>
+            Y(%)
+            <NumberField min={0} max={100} value={Math.round(current.y * 100)} onChange={(v) => set({ y: v / 100 })} />
+          </label>
+          <label>
+            幅(%)
+            <NumberField min={1} max={100} value={Math.round(current.width * 100)} onChange={(v) => set({ width: v / 100 })} />
+          </label>
+          <label>
+            高さ(%)
+            <NumberField min={1} max={100} value={Math.round(current.height * 100)} onChange={(v) => set({ height: v / 100 })} />
+          </label>
+        </>
+      )}
+    </div>
+  );
+}
+
 function rgbaToHex(rgba: string): string {
   const match = rgba.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (!match) return '#000000';
@@ -452,6 +491,7 @@ export function ContextToolbar({ project, scene, layers }: Props) {
     return (
       <div className="context-toolbar">
         {Arrange}
+        <CropControl crop={layer.crop} onChange={(c) => updateLayer(sceneId, layer.id, { crop: c })} />
         <PhotoFilterControl filter={layer.filter} onChange={(f) => updateLayer(sceneId, layer.id, { filter: f })} />
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
         {DeleteButton}
