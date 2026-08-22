@@ -28,7 +28,7 @@ import {
   TrashIcon,
   UnderlineIcon,
 } from './icons';
-import { AnimationControl, PhotoFilterControl } from './LayerPropertyControls';
+import { AnimationControl, LayerTimingControl, PhotoFilterControl } from './LayerPropertyControls';
 import { NumberField } from './NumberField';
 
 const FONT_OPTIONS = ['sans-serif', 'serif', 'monospace', 'Roboto', 'Noto Sans JP', 'Georgia', 'Impact', 'Courier New'];
@@ -307,6 +307,7 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
           })()}
         </div>
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
+        <LayerTimingControl layer={layer} sceneDurationMs={sceneDurationMs} onChange={(patch) => updateLayer(sceneId, layer.id, patch)} />
         {DeleteButton}
       </div>
     );
@@ -356,6 +357,7 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
           />
         </div>
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
+        <LayerTimingControl layer={layer} sceneDurationMs={sceneDurationMs} onChange={(patch) => updateLayer(sceneId, layer.id, patch)} />
         {DeleteButton}
       </div>
     );
@@ -400,6 +402,7 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
         </div>
         <PhotoFilterControl filter={layer.filter} onChange={(f) => updateLayer(sceneId, layer.id, { filter: f })} />
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
+        <LayerTimingControl layer={layer} sceneDurationMs={sceneDurationMs} onChange={(patch) => updateLayer(sceneId, layer.id, patch)} />
         {DeleteButton}
       </div>
     );
@@ -414,6 +417,7 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
         </button>
         <PhotoFilterControl filter={layer.filter} onChange={(f) => updateLayer(sceneId, layer.id, { filter: f })} />
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
+        <LayerTimingControl layer={layer} sceneDurationMs={sceneDurationMs} onChange={(patch) => updateLayer(sceneId, layer.id, patch)} />
         {DeleteButton}
       </div>
     );
@@ -459,6 +463,7 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
           />
         </label>
       </div>
+      <LayerTimingControl layer={layer} sceneDurationMs={sceneDurationMs} onChange={(patch) => updateLayer(sceneId, layer.id, patch)} />
       {DeleteButton}
     </div>
   );

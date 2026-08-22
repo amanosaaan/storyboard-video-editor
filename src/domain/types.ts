@@ -12,8 +12,12 @@ export interface TransitionConfig {
 }
 
 export interface AnimationConfig {
-  type: 'pulse' | 'spin' | 'hover' | 'shake' | 'bounce';
+  type: 'pulse' | 'spin' | 'hover' | 'shake' | 'bounce' | 'pop' | 'rise' | 'typewriter';
+  /** ループ系(pulse/spin/hover/shake/bounce)は1周期の長さ、
+   *  登場系(pop/rise/typewriter)はレイヤーが表示され始めてから効果が終わるまでの長さ。 */
   durationMs: number;
+  /** 効果の強さの詳細調整。0〜100、未指定は50（標準）。spin/typewriterでは使わない。 */
+  intensity?: number;
 }
 
 export interface BaseLayer {
@@ -27,6 +31,16 @@ export interface BaseLayer {
   opacity: number;
   zIndex: number;
   animation?: AnimationConfig;
+  /**
+   * シーン内でこのレイヤーが表示され始める時刻(ms、シーン先頭からの相対時刻)。
+   * 未指定は0（シーンの先頭から表示）。
+   */
+  startMs?: number;
+  /**
+   * シーン内でこのレイヤーが表示され終わる時刻(ms、シーン先頭からの相対時刻)。
+   * 未指定はシーンの長さ（シーンの終わりまで表示）。
+   */
+  endMs?: number;
 }
 
 export interface PhotoFilter {

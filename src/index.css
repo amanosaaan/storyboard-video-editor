@@ -554,6 +554,77 @@ button.editor__menubar-item[aria-expanded='true'] {
   color: var(--accent-contrast);
 }
 
+.layer-timing__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 230;
+}
+
+.layer-timing__panel {
+  position: fixed;
+  transform: translate(-50%, -100%) translateY(-10px);
+  z-index: 231;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 240px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.layer-timing__track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-app);
+}
+
+.layer-timing__range {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.layer-timing__handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--accent-contrast);
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.layer-timing__fields {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-text {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
 .context-toolbar__select {
   height: 28px;
   border: 1px solid var(--border);

@@ -1,3 +1,4 @@
+import { isLayerVisibleAt } from '../domain/layerTiming';
 import type { AnimationConfig, Layer, Scene, TransitionConfig } from '../domain/types';
 
 export type ResolvedAssetMap = Map<string, HTMLVideoElement | HTMLImageElement>;
@@ -19,6 +20,7 @@ export function drawSceneFrame(
   const sortedLayers = [...scene.layers].sort((a, b) => a.zIndex - b.zIndex);
   for (const layer of sortedLayers) {
     if (layer.id === hiddenLayerId) continue;
+    if (!isLayerVisibleAt(layer, sceneTimeMs, scene.duration)) continue;
     drawLayer(ctx, layer, resolvedAssets, sceneTimeMs);
   }
   ctx.restore();
@@ -75,33 +77,77 @@ export function drawTransitionFrame(
   }
 }
 
+/** 0→1で「少し行き過ぎてから戻る」ようなイージング。ポップの弾む感じに使う。 */
+function easeOutBack(t: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  const x = t - 1;
+  return 1 + c3 * x * x * x + c1 * x * x;
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 function applyAnimationTransform(
   ctx: Ctx2D,
   animation: AnimationConfig | undefined,
   sceneTimeMs: number,
+  layerStartMs: number,
   width: number,
   height: number,
 ): void {
   if (!animation || animation.durationMs <= 0) return;
-  const t = (sceneTimeMs % animation.durationMs) / animation.durationMs;
-  const angle = 2 * Math.PI * t;
+  // 詳細調整(intensity)。0〜100、未指定は50（標準＝1倍）。
+  const strength = (animation.intensity ?? 50) / 50;
+
   switch (animation.type) {
-    case 'pulse': {
-      const s = 1 + 0.08 * Math.sin(angle);
+    // ループ系: シーン内の経過時間に関わらず、周期(durationMs)でずっと繰り返す。
+    case 'pulse':
+    case 'spin':
+    case 'hover':
+    case 'shake':
+    case 'bounce': {
+      const t = (sceneTimeMs % animation.durationMs) / animation.durationMs;
+      const angle = 2 * Math.PI * t;
+      switch (animation.type) {
+        case 'pulse': {
+          const s = 1 + 0.08 * strength * Math.sin(angle);
+          ctx.scale(s, s);
+          break;
+        }
+        case 'spin':
+          ctx.rotate(angle);
+          break;
+        case 'hover':
+          ctx.translate(0, Math.sin(angle) * height * 0.06 * strength);
+          break;
+        case 'shake':
+          ctx.translate(Math.sin(angle * 6) * width * 0.02 * strength, 0);
+          break;
+        case 'bounce':
+          ctx.translate(0, -Math.abs(Math.sin(Math.PI * t)) * height * 0.15 * strength);
+          break;
+      }
+      break;
+    }
+    // 登場系: レイヤーが表示され始めた瞬間(layerStartMs)を起点に、一度だけ再生する。
+    case 'pop': {
+      const t = Math.min(1, Math.max(0, (sceneTimeMs - layerStartMs) / animation.durationMs));
+      const s = Math.max(0, easeOutBack(t));
       ctx.scale(s, s);
       break;
     }
-    case 'spin':
-      ctx.rotate(angle);
+    case 'rise': {
+      const t = Math.min(1, Math.max(0, (sceneTimeMs - layerStartMs) / animation.durationMs));
+      const eased = easeOutCubic(t);
+      const riseDistance = height * 0.5 * strength;
+      ctx.translate(0, (1 - eased) * riseDistance);
       break;
-    case 'hover':
-      ctx.translate(0, Math.sin(angle) * height * 0.06);
-      break;
-    case 'shake':
-      ctx.translate(Math.sin(angle * 6) * width * 0.02, 0);
-      break;
-    case 'bounce':
-      ctx.translate(0, -Math.abs(Math.sin(Math.PI * t)) * height * 0.15);
+    }
+    case 'typewriter':
+      // 文字を1文字ずつ出す効果は描画する文字列自体を変えて表現するため、
+      // ここでは幾何変換は不要（drawLayerのtextケースで個別に処理する）。
       break;
   }
 }
@@ -120,7 +166,8 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
     // 中心を軸に、水平・垂直それぞれの傾き角度からシアー変換を適用する。
     ctx.transform(1, Math.tan(((layer.skewY ?? 0) * Math.PI) / 180), Math.tan(((layer.skewX ?? 0) * Math.PI) / 180), 1, 0, 0);
   }
-  applyAnimationTransform(ctx, layer.animation, sceneTimeMs, layer.width, layer.height);
+  const layerStartMs = layer.startMs ?? 0;
+  applyAnimationTransform(ctx, layer.animation, sceneTimeMs, layerStartMs, layer.width, layer.height);
   ctx.translate(-cx, -cy);
 
   switch (layer.type) {
@@ -165,9 +212,17 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
             ? layer.x + layer.width
             : layer.x + layer.width / 2;
       const lineHeight = layer.fontSize * 1.25;
-      const lines = layer.content.split('\n');
-      const textBlockHeight = lines.length * lineHeight;
+      // 縦位置は元の文章全体の行数を基準に計算し、タイプライター表示中に
+      // 文字が増えるたびにテキストの位置がガタガタ動かないようにする。
+      const fullLines = layer.content.split('\n');
+      const textBlockHeight = fullLines.length * lineHeight;
       const startY = layer.y + Math.max(0, (layer.height - textBlockHeight) / 2);
+      let displayContent = layer.content;
+      if (layer.animation?.type === 'typewriter') {
+        const progress = Math.min(1, Math.max(0, (sceneTimeMs - layerStartMs) / layer.animation.durationMs));
+        displayContent = layer.content.slice(0, Math.round(layer.content.length * progress));
+      }
+      const lines = displayContent.split('\n');
       lines.forEach((line, i) => {
         const lineY = startY + i * lineHeight;
         if (layer.strokeColor) ctx.strokeText(line, textX, lineY, layer.width);
