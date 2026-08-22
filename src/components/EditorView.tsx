@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createCaptionLayer, createImageLayerForScene, createTextLayer } from '../domain/layerFactory';
+import { createCaptionLayer, createImageLayerForScene, createTextLayer, cropPatch } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
 import type { ImageLayer } from '../domain/types';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
@@ -221,7 +221,8 @@ export function EditorView() {
         <ImageCropModal
           layer={croppingLayer}
           onConfirm={(crop) => {
-            updateLayer(currentScene.id, croppingLayer.id, { crop });
+            const asset = project.mediaLibrary.find((m) => m.id === croppingLayer.mediaId);
+            updateLayer(currentScene.id, croppingLayer.id, cropPatch(croppingLayer, crop, asset));
             setCroppingImageLayerId(null);
           }}
           onCancel={() => setCroppingImageLayerId(null)}

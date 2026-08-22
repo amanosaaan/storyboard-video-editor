@@ -90,6 +90,38 @@ export function createImageLayerForScene(project: Project, scene: Scene, asset: 
   return { id: nanoid(), type: 'image', mediaId: asset.id, x, y, width, height, rotation: 0, opacity: 1, zIndex };
 }
 
+/**
+ * トリミング確定時のレイヤー更新パッチを計算する。
+ * crop（元画像に対する割合）が元の縦横比と異なる場合、crop だけを更新して
+ * width/height を据え置くと、描画時にその比率に引き伸ばされてしまう。
+ * そのため、トリミング後の実ピクセル縦横比を求め、元のレイヤー枠内に収まる
+ * よう中心を保ったままレイヤーサイズも合わせて更新する。
+ */
+export function cropPatch(
+  layer: ImageLayer,
+  crop: { x: number; y: number; width: number; height: number },
+  asset: MediaAsset | undefined,
+): Partial<ImageLayer> {
+  if (!asset?.width || !asset?.height) return { crop };
+  const cx = layer.x + layer.width / 2;
+  const cy = layer.y + layer.height / 2;
+  const croppedWidth = crop.width * asset.width;
+  const croppedHeight = crop.height * asset.height;
+  const fitted = containFit(croppedWidth, croppedHeight, {
+    x: layer.x,
+    y: layer.y,
+    width: layer.width,
+    height: layer.height,
+  });
+  return {
+    crop,
+    x: cx - fitted.width / 2,
+    y: cy - fitted.height / 2,
+    width: fitted.width,
+    height: fitted.height,
+  };
+}
+
 export function createVideoLayerForScene(
   project: Project,
   scene: Scene,

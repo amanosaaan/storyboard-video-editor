@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { nanoid } from 'nanoid';
 import { createImageLayerForScene, createVideoLayerForScene } from '../domain/layerFactory';
 import type { AudioLayer, MediaAsset, Project, Scene } from '../domain/types';
-import { addMediaFile, getThumbnailUrl } from '../storage/mediaRepository';
+import { addMediaFile, deleteMedia, getThumbnailUrl } from '../storage/mediaRepository';
 import { useProjectStore } from '../state/projectStore';
-import { CloseIcon } from './icons';
+import { CloseIcon, TrashIcon } from './icons';
 
 interface Props {
   project: Project;
@@ -14,6 +14,7 @@ interface Props {
 
 export function MediaLibraryPanel({ project, scene, onClose }: Props) {
   const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
+  const removeMediaAsset = useProjectStore((s) => s.removeMediaAsset);
   const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
   const updateSceneDuration = useProjectStore((s) => s.updateSceneDuration);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +49,16 @@ export function MediaLibraryPanel({ project, scene, onClose }: Props) {
       }
     }
     setUploading(false);
+  }
+
+  async function handleDelete(asset: MediaAsset) {
+    if (!window.confirm(`「${asset.name}」を削除しますか？シーンで使用中の場合はそこからも取り除かれます。`)) return;
+    removeMediaAsset(asset.id);
+    try {
+      await deleteMedia(asset.id);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   function placeOnScene(asset: MediaAsset) {
@@ -110,9 +121,19 @@ export function MediaLibraryPanel({ project, scene, onClose }: Props) {
                 <span className="media-library__name" title={asset.name}>
                   {asset.name}
                 </span>
-                <button onClick={() => placeOnScene(asset)}>
-                  {asset.kind === 'audio' ? 'シーンにBGMとして追加' : 'シーンに配置'}
-                </button>
+                <div className="media-library__item-actions">
+                  <button onClick={() => placeOnScene(asset)}>
+                    {asset.kind === 'audio' ? 'シーンにBGMとして追加' : 'シーンに配置'}
+                  </button>
+                  <button
+                    className="btn-icon media-library__delete"
+                    title="素材を削除"
+                    aria-label="素材を削除"
+                    onClick={() => void handleDelete(asset)}
+                  >
+                    <TrashIcon size={16} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
