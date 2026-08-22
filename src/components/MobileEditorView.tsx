@@ -7,10 +7,10 @@ import {
   cropPatch,
 } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
-import type { ImageLayer } from '../domain/types';
+import type { ImageLayer, Scene } from '../domain/types';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
-import { addMediaFile } from '../storage/mediaRepository';
+import { addMediaFile, getThumbnailUrl } from '../storage/mediaRepository';
 import { useProjectStore } from '../state/projectStore';
 import { BottomSheet } from './BottomSheet';
 import { ContextToolbar } from './ContextToolbar';
@@ -42,6 +42,14 @@ import { RecordingPanel } from './RecordingPanel';
 // .mobile-scene-chip の width と .mobile-editor__scenes-scroll の gap（index.css）と一致させること。
 const SCENE_CHIP_WIDTH = 56;
 const SCENE_CHIP_GAP = 8;
+
+/** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
+function getSceneMainMediaId(scene: Scene): string | null {
+  const visual = scene.layers
+    .filter((l) => l.type === 'video' || l.type === 'image')
+    .sort((a, b) => a.zIndex - b.zIndex)[0];
+  return visual && 'mediaId' in visual ? visual.mediaId : null;
+}
 
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -81,6 +89,7 @@ export function MobileEditorView() {
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
+  const [sceneThumbUrls, setSceneThumbUrls] = useState<Record<string, string>>({});
 
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
@@ -111,6 +120,26 @@ export function MobileEditorView() {
     window.addEventListener('resize', updateSheetMaxHeight);
     return () => window.removeEventListener('resize', updateSheetMaxHeight);
   }, []);
+
+  // CapCutのように、シーンチップに「主役」の動画/画像素材のサムネイルを表示する。
+  useEffect(() => {
+    if (!project) return;
+    let cancelled = false;
+    (async () => {
+      for (const scene of project.scenes) {
+        const mediaId = getSceneMainMediaId(scene);
+        const asset = mediaId ? project.mediaLibrary.find((m) => m.id === mediaId) : undefined;
+        if (!asset?.thumbnailBlobId) continue;
+        const url = await getThumbnailUrl(asset.thumbnailBlobId);
+        if (url && !cancelled) {
+          setSceneThumbUrls((prev) => (prev[scene.id] ? prev : { ...prev, [scene.id]: url }));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [project]);
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
@@ -260,7 +289,8 @@ export function MobileEditorView() {
             {project.scenes.map((scene, i) => (
               <button
                 key={scene.id}
-                className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}`}
+                className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
+                style={sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined}
                 onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
               >
                 {i + 1}
