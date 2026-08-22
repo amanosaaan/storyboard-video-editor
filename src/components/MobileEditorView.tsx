@@ -68,17 +68,18 @@ export function MobileEditorView() {
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
 
-  // CapCutと同様、キャンバスで要素を選択したら自動でプロパティ編集シートを開き、
-  // 選択解除したら自動で閉じる（配置タブからの手動オープンはそのまま維持）。
-  const wasSelectionEmptyRef = useRef(true);
+  // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
+  // プロパティ編集シートを開き、選択解除したら自動で閉じる。
+  // 「何か選択された状態」から「別の何かが選択された状態」への変化も検知しないと、
+  // 一度シートを手動で閉じた後に別のツール（図形・字幕など）で新しい要素を
+  // 追加したときにシートが開かないままになってしまう。
+  const prevSelectionKeyRef = useRef('');
   useEffect(() => {
-    const isEmpty = selectedLayerIds.length === 0;
-    if (!isEmpty && wasSelectionEmptyRef.current) {
-      setArrangeOpen(true);
-    } else if (isEmpty && !wasSelectionEmptyRef.current) {
-      setArrangeOpen(false);
+    const key = selectedLayerIds.join(',');
+    if (key !== prevSelectionKeyRef.current) {
+      setArrangeOpen(key !== '');
     }
-    wasSelectionEmptyRef.current = isEmpty;
+    prevSelectionKeyRef.current = key;
   }, [selectedLayerIds]);
 
   if (!project) return null;

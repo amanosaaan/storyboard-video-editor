@@ -10,16 +10,19 @@ import {
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
   ArrowLeft,
+  Bold,
   BringToFront,
   Captions,
   ChevronDown,
   ChevronUp,
+  Circle,
   Crop,
   Expand,
   Focus,
   FolderOpen,
   Group,
   ImageIcon as LucideImageIcon,
+  Italic,
   Layers,
   Minus,
   MousePointer2,
@@ -33,14 +36,18 @@ import {
   Search,
   SendToBack,
   Shapes,
+  Slash,
   Square,
   Trash2,
   Type,
+  Underline,
   Undo2,
   Redo2,
   Ungroup,
   Upload,
   Video,
+  Volume2,
+  VolumeX,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -94,3 +101,11 @@ export const TextAlignRightIcon = icon(AlignRight);
 export const ImageIcon = icon(LucideImageIcon);
 export const CropIcon = icon(Crop);
 export const ExpandIcon = icon(Expand);
+export const BoldIcon = icon(Bold);
+export const ItalicIcon = icon(Italic);
+export const UnderlineIcon = icon(Underline);
+export const ShapeRectIcon = icon(Square);
+export const ShapeCircleIcon = icon(Circle);
+export const ShapeLineIcon = icon(Slash);
+export const MuteOnIcon = icon(VolumeX);
+export const MuteOffIcon = icon(Volume2);

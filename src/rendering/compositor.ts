@@ -146,7 +146,7 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
         ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
       }
       ctx.fillStyle = layer.color;
-      ctx.font = `${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
+      ctx.font = `${layer.italic ? 'italic ' : ''}${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
       ctx.textAlign = layer.align;
       ctx.textBaseline = 'top';
       if (layer.strokeColor) {
@@ -166,6 +166,20 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
         const lineY = layer.y + i * lineHeight;
         if (layer.strokeColor) ctx.strokeText(line, textX, lineY, layer.width);
         ctx.fillText(line, textX, lineY, layer.width);
+        if (layer.underline) {
+          const textWidth = Math.min(ctx.measureText(line).width, layer.width);
+          const underlineX =
+            layer.align === 'left' ? textX : layer.align === 'right' ? textX - textWidth : textX - textWidth / 2;
+          const underlineY = lineY + layer.fontSize * 0.92;
+          ctx.save();
+          ctx.strokeStyle = layer.color;
+          ctx.lineWidth = Math.max(1, layer.fontSize * 0.05);
+          ctx.beginPath();
+          ctx.moveTo(underlineX, underlineY);
+          ctx.lineTo(underlineX + textWidth, underlineY);
+          ctx.stroke();
+          ctx.restore();
+        }
       });
       break;
     }

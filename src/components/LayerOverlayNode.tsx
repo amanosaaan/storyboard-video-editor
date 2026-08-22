@@ -46,9 +46,8 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange,
         height={scaledHeight}
         rotation={layer.rotation}
         fill="rgba(255,255,255,0.001)"
-        stroke={isSelected ? '#1a73e8' : 'rgba(255,255,255,0.5)'}
-        strokeWidth={isSelected ? 2 : 1}
-        dash={isSelected ? undefined : [4, 4]}
+        stroke={isSelected ? '#1a73e8' : undefined}
+        strokeWidth={isSelected ? 2 : 0}
         draggable
         onClick={(e) => onSelect(e.evt.shiftKey)}
         onTap={(e) => onSelect('shiftKey' in e.evt && e.evt.shiftKey)}

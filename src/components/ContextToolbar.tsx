@@ -1,5 +1,5 @@
 import { alignPatches, bringToFrontPatches, rotatePatches, sendToBackPatches, type LayerPatch } from '../domain/arrange';
-import type { AudioLayer, Layer, Project, Scene, ShapeLayer } from '../domain/types';
+import type { AudioLayer, Layer, Project, Scene } from '../domain/types';
 import { useProjectStore } from '../state/projectStore';
 import {
   AlignBottomIcon,
@@ -8,17 +8,25 @@ import {
   AlignMiddleIcon,
   AlignRightIcon,
   AlignTopIcon,
+  BoldIcon,
   BringToFrontIcon,
   CropIcon,
+  ItalicIcon,
   MinusIcon,
+  MuteOffIcon,
+  MuteOnIcon,
   PlusIcon,
   RotateLeftIcon,
   RotateRightIcon,
   SendToBackIcon,
+  ShapeCircleIcon,
+  ShapeLineIcon,
+  ShapeRectIcon,
   TextAlignCenterIcon,
   TextAlignLeftIcon,
   TextAlignRightIcon,
   TrashIcon,
+  UnderlineIcon,
 } from './icons';
 import { AnimationControl, PhotoFilterControl } from './LayerPropertyControls';
 import { NumberField } from './NumberField';
@@ -158,21 +166,19 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
     return (
       <div className="context-toolbar">
         {Arrange}
-        <span className="context-toolbar__hint">テキストボックスをダブルクリックで編集</span>
         <div className="context-toolbar__group">
-          <label>
-            フォント
-            <select
-              value={layer.fontFamily}
-              onChange={(e) => updateLayer(sceneId, layer.id, { fontFamily: e.target.value })}
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f} value={f} style={{ fontFamily: f }}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </label>
+          <select
+            className="context-toolbar__select"
+            title="フォント"
+            value={layer.fontFamily}
+            onChange={(e) => updateLayer(sceneId, layer.id, { fontFamily: e.target.value })}
+          >
+            {FONT_OPTIONS.map((f) => (
+              <option key={f} value={f} style={{ fontFamily: f }}>
+                {f}
+              </option>
+            ))}
+          </select>
           <div className="context-toolbar__stepper">
             <button
               className="context-toolbar__icon-btn"
@@ -197,6 +203,31 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
             value={layer.color}
             onChange={(e) => updateLayer(sceneId, layer.id, { color: e.target.value })}
           />
+        </div>
+        <div className="context-toolbar__group">
+          <div className="context-toolbar__icon-row">
+            <button
+              className={`context-toolbar__icon-btn${layer.fontWeight === 'bold' ? ' is-active' : ''}`}
+              title="太字"
+              onClick={() => updateLayer(sceneId, layer.id, { fontWeight: layer.fontWeight === 'bold' ? 'normal' : 'bold' })}
+            >
+              <BoldIcon size={16} />
+            </button>
+            <button
+              className={`context-toolbar__icon-btn${layer.italic ? ' is-active' : ''}`}
+              title="斜体"
+              onClick={() => updateLayer(sceneId, layer.id, { italic: !layer.italic })}
+            >
+              <ItalicIcon size={16} />
+            </button>
+            <button
+              className={`context-toolbar__icon-btn${layer.underline ? ' is-active' : ''}`}
+              title="下線"
+              onClick={() => updateLayer(sceneId, layer.id, { underline: !layer.underline })}
+            >
+              <UnderlineIcon size={16} />
+            </button>
+          </div>
           <div className="context-toolbar__segmented">
             <button
               className={layer.align === 'left' ? 'is-active' : ''}
@@ -286,29 +317,43 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
       <div className="context-toolbar">
         {Arrange}
         <div className="context-toolbar__group">
-          <label>
-            種類
-            <select
-              value={layer.shape}
-              onChange={(e) => updateLayer(sceneId, layer.id, { shape: e.target.value as ShapeLayer['shape'] })}
+          <div className="context-toolbar__segmented">
+            <button
+              className={layer.shape === 'rect' ? 'is-active' : ''}
+              title="矩形"
+              onClick={() => updateLayer(sceneId, layer.id, { shape: 'rect' })}
             >
-              <option value="rect">矩形</option>
-              <option value="circle">円</option>
-              <option value="line">線</option>
-            </select>
-          </label>
-          <label>
-            塗り色
-            <input type="color" value={layer.fill} onChange={(e) => updateLayer(sceneId, layer.id, { fill: e.target.value })} />
-          </label>
-          <label>
-            線の色
-            <input
-              type="color"
-              value={layer.stroke ?? '#000000'}
-              onChange={(e) => updateLayer(sceneId, layer.id, { stroke: e.target.value })}
-            />
-          </label>
+              <ShapeRectIcon size={16} />
+            </button>
+            <button
+              className={layer.shape === 'circle' ? 'is-active' : ''}
+              title="円"
+              onClick={() => updateLayer(sceneId, layer.id, { shape: 'circle' })}
+            >
+              <ShapeCircleIcon size={16} />
+            </button>
+            <button
+              className={layer.shape === 'line' ? 'is-active' : ''}
+              title="線"
+              onClick={() => updateLayer(sceneId, layer.id, { shape: 'line' })}
+            >
+              <ShapeLineIcon size={16} />
+            </button>
+          </div>
+          <input
+            className="context-toolbar__swatch"
+            type="color"
+            title="塗り色"
+            value={layer.fill}
+            onChange={(e) => updateLayer(sceneId, layer.id, { fill: e.target.value })}
+          />
+          <input
+            className="context-toolbar__swatch"
+            type="color"
+            title="線の色"
+            value={layer.stroke ?? '#000000'}
+            onChange={(e) => updateLayer(sceneId, layer.id, { stroke: e.target.value })}
+          />
         </div>
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />
         {DeleteButton}
@@ -345,14 +390,13 @@ export function ContextToolbar({ project, scene, layers, onOpenCrop }: Props) {
               onChange={(e) => updateLayer(sceneId, layer.id, { volume: Number(e.target.value) })}
             />
           </label>
-          <label className="context-toolbar__checkbox">
-            <input
-              type="checkbox"
-              checked={layer.muted}
-              onChange={(e) => updateLayer(sceneId, layer.id, { muted: e.target.checked })}
-            />
-            ミュート
-          </label>
+          <button
+            className={`context-toolbar__icon-btn${layer.muted ? ' is-active' : ''}`}
+            title={layer.muted ? 'ミュート解除' : 'ミュート'}
+            onClick={() => updateLayer(sceneId, layer.id, { muted: !layer.muted })}
+          >
+            {layer.muted ? <MuteOnIcon size={16} /> : <MuteOffIcon size={16} />}
+          </button>
         </div>
         <PhotoFilterControl filter={layer.filter} onChange={(f) => updateLayer(sceneId, layer.id, { filter: f })} />
         <AnimationControl animation={layer.animation} onChange={(a) => updateLayer(sceneId, layer.id, { animation: a })} />

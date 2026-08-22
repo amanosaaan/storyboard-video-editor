@@ -61,6 +61,8 @@ export interface TextLayer extends BaseLayer {
   fontSize: number;
   color: string;
   fontWeight: string;
+  italic?: boolean;
+  underline?: boolean;
   align: 'left' | 'center' | 'right';
   /** 字幕用の半透明背景ボックス（未指定なら背景なし） */
   backgroundColor?: string;
