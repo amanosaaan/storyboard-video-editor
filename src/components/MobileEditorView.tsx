@@ -93,19 +93,41 @@ export function MobileEditorView() {
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
   const [sceneThumbUrls, setSceneThumbUrls] = useState<Record<string, string>>({});
   const scenesScrollRef = useRef<HTMLDivElement>(null);
-  // 自動で中央寄せするためにこちらでscrollLeftを書き換えたときの「狙った値」を覚えておき、
-  // 実際に発火したscrollイベントの値がそれと一致する場合だけ「自分で起こしたスクロール」と
-  // 判定して無視する。真偽フラグ方式だと、ブラウザがscrollイベントを非同期・間引きして
-  // 発火させるタイミングとズレたときに、ユーザーの連続ドラッグ中の別のスクロールまで
-  // 誤って無視してしまうことがあるため、値ベースで判定する。
-  const lastProgrammaticScrollLeftRef = useRef<number | null>(null);
-  // ユーザーが指でドラッグ中（またはその余韻の慣性スクロール中）は、自動追従が
-  // scrollLeftを書き換えて指の動きと取り合いにならないよう一時的に止める。
-  // 「押した瞬間」だけでなく「スクロールが実際に静止するまで」判定したいので、
-  // scrollイベントが来るたびにタイマーを延長する方式にする（慣性スクロールも
-  // pointerup後にscrollイベントが出続けるため、ボタンイベントだけでは検知できない）。
+  // ユーザーが指でチップ列に触れている（またはその余韻の慣性スクロール中）かどうか。
+  // これがtrueの間だけscrollイベントを「ユーザー操作」として再生位置に反映し、
+  // 自動追従（下のrAFループ）はscrollLeftの書き換えを控える。
+  //
+  // 以前はここを「自動追従で書き換えた値と実際のscrollLeftを比較して一致すれば無視」
+  // という方式にしていたが、再生中は毎フレームscrollLeftを書き換えるため、
+  // ブラウザがscrollイベントを間引き・非同期で発火させるタイミングとズレると
+  // 「狙った値」の記録が次のフレームの値で上書きされてしまい、比較が一致せず
+  // ユーザー操作と誤判定してengine.seek()を呼んでしまうことがあった。
+  // それが毎フレーム発生すると、実際の再生位置(timeRef.current)を外から
+  // 継続的に書き換えてしまい、動画・音声の再生自体が進まなくなる重大な不具合になっていた。
+  // ポインター（指/マウス）が実際に触れているかという確実な信号で判定するよう変更し、
+  // この種のタイミング競合を根本から無くした。
   const isUserScrollingRef = useRef(false);
   const resumeAutoScrollTimeoutRef = useRef<number | null>(null);
+  function scheduleResumeAutoScroll() {
+    if (resumeAutoScrollTimeoutRef.current !== null) window.clearTimeout(resumeAutoScrollTimeoutRef.current);
+    resumeAutoScrollTimeoutRef.current = window.setTimeout(() => {
+      isUserScrollingRef.current = false;
+      resumeAutoScrollTimeoutRef.current = null;
+    }, 150);
+  }
+  function handleScenesPointerDown() {
+    isUserScrollingRef.current = true;
+    if (resumeAutoScrollTimeoutRef.current !== null) {
+      window.clearTimeout(resumeAutoScrollTimeoutRef.current);
+      resumeAutoScrollTimeoutRef.current = null;
+    }
+  }
+  function handleScenesPointerUp() {
+    // タップだけで指を離した場合などスクロールイベントがこの後来ないケースに備え、
+    // ここでも一旦タイマーを仕掛けておく。実際に慣性スクロールが続いていれば
+    // handleScenesScroll側で随時延長されるので問題ない。
+    scheduleResumeAutoScroll();
+  }
   useEffect(() => {
     return () => {
       if (resumeAutoScrollTimeoutRef.current !== null) window.clearTimeout(resumeAutoScrollTimeoutRef.current);
@@ -200,7 +222,6 @@ export function MobileEditorView() {
             position.scene.duration,
           );
           if (Math.abs(container.scrollLeft - target) > 0.5) {
-            lastProgrammaticScrollLeftRef.current = target;
             container.scrollLeft = target;
           }
         }
@@ -212,24 +233,12 @@ export function MobileEditorView() {
   }, [project, engine.getLiveTimeMs]);
 
   // ユーザーがシーンチップ列を直接ドラッグ/スクロールしたら、その位置を再生位置として
-  // 扱う（＝チップ列自体がシークバーを兼ねる）。上の自動追従処理によるscrollLeftの
-  // 書き換えで発火したscrollイベントは、実際の値が「狙った値」と一致する場合のみ無視する。
+  // 扱う（＝チップ列自体がシークバーを兼ねる）。isUserScrollingRefがfalseの間の
+  // scrollイベントは自動追従由来なので無視する（詳しい経緯は上のrefのコメント参照）。
   function handleScenesScroll() {
     const container = scenesScrollRef.current;
-    if (!container || !project) return;
-    const expected = lastProgrammaticScrollLeftRef.current;
-    if (expected !== null && Math.abs(container.scrollLeft - expected) < 1) {
-      lastProgrammaticScrollLeftRef.current = null;
-      return;
-    }
-    // ユーザー操作由来のスクロール。しばらく自動追従を止め、スクロールが止まったら再開する。
-    isUserScrollingRef.current = true;
-    if (resumeAutoScrollTimeoutRef.current !== null) window.clearTimeout(resumeAutoScrollTimeoutRef.current);
-    resumeAutoScrollTimeoutRef.current = window.setTimeout(() => {
-      isUserScrollingRef.current = false;
-      resumeAutoScrollTimeoutRef.current = null;
-    }, 150);
-
+    if (!container || !project || !isUserScrollingRef.current) return;
+    scheduleResumeAutoScroll(); // まだスクロール（慣性含む）が続いているのでタイマーを延長
     // 前後の余白ぶんscrollLeftとoffsetが一致するので、そのままpx→時刻変換にかける。
     engine.seek(timelineOffsetPxToGlobalMs(project.scenes, container.scrollLeft));
   }
@@ -375,6 +384,9 @@ export function MobileEditorView() {
               className="mobile-editor__scenes-scroll"
               ref={scenesScrollRef}
               onScroll={handleScenesScroll}
+              onPointerDown={handleScenesPointerDown}
+              onPointerUp={handleScenesPointerUp}
+              onPointerCancel={handleScenesPointerUp}
               style={{ paddingLeft: scenesViewportHalfWidth, paddingRight: scenesViewportHalfWidth }}
             >
               {project.scenes.map((scene, i) => (
