@@ -166,8 +166,10 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
             : layer.x + layer.width / 2;
       const lineHeight = layer.fontSize * 1.25;
       const lines = layer.content.split('\n');
+      const textBlockHeight = lines.length * lineHeight;
+      const startY = layer.y + Math.max(0, (layer.height - textBlockHeight) / 2);
       lines.forEach((line, i) => {
-        const lineY = layer.y + i * lineHeight;
+        const lineY = startY + i * lineHeight;
         if (layer.strokeColor) ctx.strokeText(line, textX, lineY, layer.width);
         ctx.fillText(line, textX, lineY, layer.width);
         if (layer.underline) {

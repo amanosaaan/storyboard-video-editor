@@ -4,7 +4,7 @@ import { createImageLayerForScene, createVideoLayerForScene } from '../domain/la
 import type { AudioLayer, MediaAsset, Project, Scene } from '../domain/types';
 import { addMediaFile, deleteMedia, getThumbnailUrl } from '../storage/mediaRepository';
 import { useProjectStore } from '../state/projectStore';
-import { CloseIcon, TrashIcon } from './icons';
+import { CloseIcon, PlusIcon, TrashIcon } from './icons';
 
 interface Props {
   project: Project;
@@ -122,8 +122,13 @@ export function MediaLibraryPanel({ project, scene, onClose }: Props) {
                   {asset.name}
                 </span>
                 <div className="media-library__item-actions">
-                  <button onClick={() => placeOnScene(asset)}>
-                    {asset.kind === 'audio' ? 'シーンにBGMとして追加' : 'シーンに配置'}
+                  <button
+                    className="btn-icon media-library__place"
+                    title={asset.kind === 'audio' ? 'シーンにBGMとして追加' : 'シーンに配置'}
+                    aria-label={asset.kind === 'audio' ? 'シーンにBGMとして追加' : 'シーンに配置'}
+                    onClick={() => placeOnScene(asset)}
+                  >
+                    <PlusIcon size={14} />
                   </button>
                   <button
                     className="btn-icon media-library__delete"
@@ -131,7 +136,7 @@ export function MediaLibraryPanel({ project, scene, onClose }: Props) {
                     aria-label="素材を削除"
                     onClick={() => void handleDelete(asset)}
                   >
-                    <TrashIcon size={16} />
+                    <TrashIcon size={14} />
                   </button>
                 </div>
               </li>
