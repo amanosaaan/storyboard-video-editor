@@ -112,6 +112,21 @@ export function MobileEditorView() {
     };
   }, []);
 
+  // タイムラインの先頭（0秒）や末尾も画面中央まで持って来られるよう、チップ列の
+  // 前後にビューポート半分ぶんの余白を持たせる。これが無いと、最初のシーンは
+  // どんなにスクロールしてもプレイヘッド（画面中央）まで届かない
+  // （scrollLeftは0未満にできないため）。
+  const [scenesViewportHalfWidth, setScenesViewportHalfWidth] = useState(0);
+  useEffect(() => {
+    function updateHalfWidth() {
+      const el = scenesScrollRef.current;
+      if (el) setScenesViewportHalfWidth(el.clientWidth / 2);
+    }
+    updateHalfWidth();
+    window.addEventListener('resize', updateHalfWidth);
+    return () => window.removeEventListener('resize', updateHalfWidth);
+  }, []);
+
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
   // 「何か選択された状態」から「別の何かが選択された状態」への変化も検知しないと、
@@ -166,6 +181,9 @@ export function MobileEditorView() {
   // させて追従させる。engine.position（約66ms間隔でしか更新されないReact state）ではなく
   // engine.getLiveTimeMs()を毎フレーム読むrAFループで追従させることで、再生中の
   // スクロールを滑らかにする（stateの間引きに引っ張られてカクつくのを防ぐ）。
+  // チップ列にはビューポート半分ぶんの余白(scenesViewportHalfWidth)を前後に
+  // 付けているため、scrollLeftはそのままoffsetと一致する
+  // （offset - clientWidth/2 + 余白(clientWidth/2) = offset）。
   useEffect(() => {
     if (!project) return;
     let raf = 0;
@@ -175,13 +193,12 @@ export function MobileEditorView() {
       if (container && project && !isUserScrollingRef.current) {
         const position = resolvePosition(project, engine.getLiveTimeMs());
         if (position) {
-          const offset = timelinePositionToOffsetPx(
+          const target = timelinePositionToOffsetPx(
             project.scenes,
             position.sceneIndex,
             position.localTimeMs,
             position.scene.duration,
           );
-          const target = offset - container.clientWidth / 2;
           if (Math.abs(container.scrollLeft - target) > 0.5) {
             lastProgrammaticScrollLeftRef.current = target;
             container.scrollLeft = target;
@@ -213,8 +230,8 @@ export function MobileEditorView() {
       resumeAutoScrollTimeoutRef.current = null;
     }, 150);
 
-    const centerOffset = container.scrollLeft + container.clientWidth / 2;
-    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, centerOffset));
+    // 前後の余白ぶんscrollLeftとoffsetが一致するので、そのままpx→時刻変換にかける。
+    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, container.scrollLeft));
   }
 
   if (!project) return null;
@@ -354,7 +371,12 @@ export function MobileEditorView() {
         </div>
         <div className="mobile-editor__scenes">
           <div className="mobile-editor__scenes-viewport">
-            <div className="mobile-editor__scenes-scroll" ref={scenesScrollRef} onScroll={handleScenesScroll}>
+            <div
+              className="mobile-editor__scenes-scroll"
+              ref={scenesScrollRef}
+              onScroll={handleScenesScroll}
+              style={{ paddingLeft: scenesViewportHalfWidth, paddingRight: scenesViewportHalfWidth }}
+            >
               {project.scenes.map((scene, i) => (
                 <button
                   key={scene.id}
