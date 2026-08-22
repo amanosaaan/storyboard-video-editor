@@ -23,7 +23,9 @@ export function PreviewPanel({ project, canvasRef, engine }: Props) {
   const displayHeight = project.resolution.height * scale;
   const scene = engine.position?.scene ?? null;
 
-  const interactiveLayers = scene ? scene.layers.filter((l) => l.type === 'text' || l.type === 'shape') : [];
+  const interactiveLayers = scene
+    ? scene.layers.filter((l) => l.type === 'text' || l.type === 'shape' || l.type === 'image' || l.type === 'video')
+    : [];
 
   function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     if (e.target === e.target.getStage()) selectLayer(null);
