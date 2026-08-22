@@ -895,10 +895,8 @@ button.editor__menubar-item[aria-expanded='true'] {
   margin-left: auto;
 }
 
-.storyboard__seekbar {
-  width: 100%;
-  margin: 0 0 6px;
-  display: block;
+.storyboard > .scene-timeline {
+  margin-bottom: 10px;
 }
 
 .storyboard__list {
@@ -1558,12 +1556,24 @@ button.editor__menubar-item[aria-expanded='true'] {
   margin-top: 10px;
 }
 
-.mobile-editor__scenes-viewport {
+.mobile-editor__scenes-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* シーンタイムライン（PC・スマホ共通、SceneTimelineStrip.tsx） */
+.scene-timeline {
+  width: 100%;
+}
+
+.scene-timeline__viewport {
   position: relative;
   width: 100%;
 }
 
-.mobile-editor__scenes-scroll {
+.scene-timeline__scroll {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1571,8 +1581,20 @@ button.editor__menubar-item[aria-expanded='true'] {
   width: 100%;
 }
 
-.mobile-editor__playhead {
-  /* スクロールする.mobile-editor__scenes-scrollの外側（.mobile-editor__scenes-viewportの
+/* マウス操作可能な環境（PC）ではクリック&ドラッグでスクロールできることを
+   カーソルの見た目で示す。タッチ操作のみの端末には影響しない。 */
+@media (pointer: fine) {
+  .scene-timeline__scroll {
+    cursor: grab;
+  }
+
+  .scene-timeline__scroll:active {
+    cursor: grabbing;
+  }
+}
+
+.scene-timeline__playhead {
+  /* スクロールする.scene-timeline__scrollの外側（.scene-timeline__viewportの
      直接の子）に置いているため、scrollLeftの影響を受けず常に中央に固定表示される。
      追従はJS側でscrollLeftを調整して行う。 */
   position: absolute;
@@ -1588,15 +1610,8 @@ button.editor__menubar-item[aria-expanded='true'] {
   z-index: 2;
 }
 
-.mobile-editor__scenes-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.mobile-scene-chip {
-  /* 横幅は動画の長さに比例させてJS側(sceneChipWidth)でインラインstyleとして設定するため、
+.scene-timeline__chip {
+  /* 横幅は動画の長さに比例させてJS側(sceneChipWidthPx)でインラインstyleとして設定するため、
      flex-shrink/growさせず常に指定通りの幅を保つ。 */
   flex: none;
   height: 56px;
@@ -1608,18 +1623,18 @@ button.editor__menubar-item[aria-expanded='true'] {
   font-weight: 600;
 }
 
-.mobile-scene-chip.has-thumb {
+.scene-timeline__chip.has-thumb {
   background-size: cover;
   background-position: center;
   color: #ffffff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
-.mobile-scene-chip.has-thumb.is-active {
+.scene-timeline__chip.has-thumb.is-active {
   color: #ffffff;
 }
 
-.mobile-scene-chip.is-active {
+.scene-timeline__chip.is-active {
   border-color: var(--accent);
   color: var(--accent);
 }

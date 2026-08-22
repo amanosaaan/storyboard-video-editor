@@ -8,6 +8,7 @@ import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngin
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
 import { PauseIcon, PlayIcon, PlusIcon, ScissorsIcon } from './icons';
+import { SceneTimelineStrip } from './SceneTimelineStrip';
 
 const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: string; preview: string }[] = [
   { type: 'none', label: 'なし', preview: '—' },
@@ -210,14 +211,7 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
           <ScissorsIcon size={16} />
         </button>
       </div>
-      <input
-        type="range"
-        className="storyboard__seekbar"
-        min={0}
-        max={engine.totalDurationMs}
-        value={engine.currentTimeMs}
-        onChange={(e) => engine.seek(Number(e.target.value))}
-      />
+      <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} />
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={project.scenes.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
           <div className="storyboard__list">
