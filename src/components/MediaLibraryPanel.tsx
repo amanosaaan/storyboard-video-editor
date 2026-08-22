@@ -52,12 +52,12 @@ export function MediaLibraryPanel({ project, scene, onClose }: Props) {
 
   function placeOnScene(asset: MediaAsset) {
     if (asset.kind === 'video') {
-      const { layer, isMain } = createVideoLayerForScene(project, scene, asset.id);
+      const { layer, isMain } = createVideoLayerForScene(project, scene, asset);
       addLayerToScene(scene.id, layer);
       // Google Vids と同様、シーンの主役となる動画を取り込んだ場合はシーンの長さを合わせる。
       if (isMain && asset.durationMs) updateSceneDuration(scene.id, asset.durationMs);
     } else if (asset.kind === 'image') {
-      addLayerToScene(scene.id, createImageLayerForScene(project, scene, asset.id));
+      addLayerToScene(scene.id, createImageLayerForScene(project, scene, asset));
     } else {
       const layer: AudioLayer = {
         id: nanoid(),

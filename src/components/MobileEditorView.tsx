@@ -95,7 +95,7 @@ export function MobileEditorView() {
       try {
         const asset = await addMediaFile(project.id, file);
         addMediaAsset(asset);
-        addLayerToScene(currentScene.id, createImageLayerForScene(project, currentScene, asset.id));
+        addLayerToScene(currentScene.id, createImageLayerForScene(project, currentScene, asset));
       } catch (err) {
         console.error(err);
       }

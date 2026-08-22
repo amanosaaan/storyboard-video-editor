@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { computeCaptionPresetLayout } from './captionPreset';
-import type { ImageLayer, Project, Scene, ShapeLayer, TextLayer, VideoLayer } from './types';
+import type { ImageLayer, MediaAsset, Project, Scene, ShapeLayer, TextLayer, VideoLayer } from './types';
 
 export function createTextLayer(scene: Scene): TextLayer {
   return {
@@ -44,44 +44,62 @@ export function createCaptionLayer(project: Project, scene: Scene): TextLayer {
   };
 }
 
-/**
- * シーンに動画/画像レイヤーを配置する際の位置・サイズ・zIndexを決める。
- * まだ動画/画像が1つも無いシーンでは画面全体（背景）として配置し、
- * 既に動画/画像がある場合は重ねて隠してしまわないよう中央に縮小して配置する。
- */
-function visualLayerBounds(project: Project, scene: Scene) {
-  const hasVisual = scene.layers.some((l) => l.type === 'video' || l.type === 'image');
-  const zIndex = scene.layers.length > 0 ? Math.max(...scene.layers.map((l) => l.zIndex)) + 1 : 1;
-  if (!hasVisual) {
-    return { x: 0, y: 0, width: project.resolution.width, height: project.resolution.height, zIndex, isMain: true };
-  }
-  const width = project.resolution.width * 0.5;
-  const height = project.resolution.height * 0.5;
+/** 指定した範囲(bounds)の中に、元の縦横比を保ったまま収まる最大サイズを計算する */
+function containFit(
+  naturalWidth: number,
+  naturalHeight: number,
+  bounds: { x: number; y: number; width: number; height: number },
+) {
+  if (!naturalWidth || !naturalHeight) return bounds;
+  const scale = Math.min(bounds.width / naturalWidth, bounds.height / naturalHeight);
+  const width = naturalWidth * scale;
+  const height = naturalHeight * scale;
   return {
-    x: (project.resolution.width - width) / 2,
-    y: (project.resolution.height - height) / 2,
+    x: bounds.x + (bounds.width - width) / 2,
+    y: bounds.y + (bounds.height - height) / 2,
     width,
     height,
-    zIndex,
-    isMain: false,
   };
 }
 
-export function createImageLayerForScene(project: Project, scene: Scene, mediaId: string): ImageLayer {
-  const { x, y, width, height, zIndex } = visualLayerBounds(project, scene);
-  return { id: nanoid(), type: 'image', mediaId, x, y, width, height, rotation: 0, opacity: 1, zIndex };
+/**
+ * シーンに動画/画像レイヤーを配置する際の位置・サイズ・zIndexを決める。
+ * まだ動画/画像が1つも無いシーンでは画面全体を使える範囲とし、
+ * 既に動画/画像がある場合は重ねて隠してしまわないよう中央の半分の範囲を使う。
+ * 素材の実サイズ（asset.width/height）が分かる場合は、その範囲の中で
+ * 元の縦横比を保ったまま最大になるようフィットさせる（比率を変えて引き伸ばさない）。
+ */
+function visualLayerBounds(project: Project, scene: Scene, asset: MediaAsset) {
+  const hasVisual = scene.layers.some((l) => l.type === 'video' || l.type === 'image');
+  const zIndex = scene.layers.length > 0 ? Math.max(...scene.layers.map((l) => l.zIndex)) + 1 : 1;
+  const outerBounds = hasVisual
+    ? {
+        x: project.resolution.width * 0.25,
+        y: project.resolution.height * 0.25,
+        width: project.resolution.width * 0.5,
+        height: project.resolution.height * 0.5,
+      }
+    : { x: 0, y: 0, width: project.resolution.width, height: project.resolution.height };
+  const fitted =
+    asset.width && asset.height ? containFit(asset.width, asset.height, outerBounds) : outerBounds;
+  return { ...fitted, zIndex, isMain: !hasVisual };
+}
+
+export function createImageLayerForScene(project: Project, scene: Scene, asset: MediaAsset): ImageLayer {
+  const { x, y, width, height, zIndex } = visualLayerBounds(project, scene, asset);
+  return { id: nanoid(), type: 'image', mediaId: asset.id, x, y, width, height, rotation: 0, opacity: 1, zIndex };
 }
 
 export function createVideoLayerForScene(
   project: Project,
   scene: Scene,
-  mediaId: string,
+  asset: MediaAsset,
 ): { layer: VideoLayer; isMain: boolean } {
-  const { x, y, width, height, zIndex, isMain } = visualLayerBounds(project, scene);
+  const { x, y, width, height, zIndex, isMain } = visualLayerBounds(project, scene, asset);
   const layer: VideoLayer = {
     id: nanoid(),
     type: 'video',
-    mediaId,
+    mediaId: asset.id,
     x,
     y,
     width,

@@ -16,16 +16,36 @@ interface Rect {
   height: number;
 }
 
-const MAX_DISPLAY = 560;
 const MIN_CROP_PX = 24;
 
 type DragMode = 'move' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+function pointFromEvent(e: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ('touches' in e && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  if ('changedTouches' in e && e.changedTouches.length > 0) {
+    return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  }
+  const me = e as MouseEvent;
+  return { x: me.clientX, y: me.clientY };
+}
 
 export function ImageCropModal({ layer, onConfirm, onCancel }: Props) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgSize, setImgSize] = useState<{ width: number; height: number } | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [maxDisplay, setMaxDisplay] = useState(560);
   const dragRef = useRef<{ mode: DragMode; startX: number; startY: number; startRect: Rect } | null>(null);
+
+  useEffect(() => {
+    function updateMaxDisplay() {
+      setMaxDisplay(Math.max(200, Math.min(560, window.innerWidth - 64)));
+    }
+    updateMaxDisplay();
+    window.addEventListener('resize', updateMaxDisplay);
+    return () => window.removeEventListener('resize', updateMaxDisplay);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +60,7 @@ export function ImageCropModal({ layer, onConfirm, onCancel }: Props) {
   function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const naturalW = e.currentTarget.naturalWidth;
     const naturalH = e.currentTarget.naturalHeight;
-    const scale = Math.min(MAX_DISPLAY / naturalW, MAX_DISPLAY / naturalH, 1);
+    const scale = Math.min(maxDisplay / naturalW, maxDisplay / naturalH, 1);
     const width = naturalW * scale;
     const height = naturalH * scale;
     setImgSize({ width, height });
@@ -49,30 +69,39 @@ export function ImageCropModal({ layer, onConfirm, onCancel }: Props) {
   }
 
   useEffect(() => {
-    function handleMouseMove(e: MouseEvent) {
+    function handleMove(e: MouseEvent | TouchEvent) {
       const drag = dragRef.current;
       if (!drag || !imgSize) return;
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
+      if ('touches' in e) e.preventDefault();
+      const p = pointFromEvent(e);
+      const dx = p.x - drag.startX;
+      const dy = p.y - drag.startY;
       setRect(() => clampRect(applyDrag(drag.mode, drag.startRect, dx, dy), imgSize));
     }
-    function handleMouseUp() {
+    function handleEnd() {
       dragRef.current = null;
     }
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('touchcancel', handleEnd);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleEnd);
     };
   }, [imgSize]);
 
   function startDrag(mode: DragMode) {
-    return (e: React.MouseEvent) => {
+    return (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (!rect) return;
-      dragRef.current = { mode, startX: e.clientX, startY: e.clientY, startRect: rect };
+      const p = pointFromEvent(e.nativeEvent);
+      dragRef.current = { mode, startX: p.x, startY: p.y, startRect: rect };
     };
   }
 
@@ -107,9 +136,15 @@ export function ImageCropModal({ layer, onConfirm, onCancel }: Props) {
                     className="crop-modal__rect"
                     style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
                     onMouseDown={startDrag('move')}
+                    onTouchStart={startDrag('move')}
                   >
                     {(['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as DragMode[]).map((h) => (
-                      <div key={h} className={`crop-modal__handle crop-modal__handle--${h}`} onMouseDown={startDrag(h)} />
+                      <div
+                        key={h}
+                        className={`crop-modal__handle crop-modal__handle--${h}`}
+                        onMouseDown={startDrag(h)}
+                        onTouchStart={startDrag(h)}
+                      />
                     ))}
                   </div>
                 </>
