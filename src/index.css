@@ -895,50 +895,18 @@ button.editor__menubar-item[aria-expanded='true'] {
   margin-left: auto;
 }
 
-.storyboard > .scene-timeline {
-  margin-bottom: 10px;
+.storyboard__seekbar {
+  width: 100%;
+  accent-color: var(--accent);
+  margin: 0 0 10px;
+  display: block;
 }
 
-.storyboard__list {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 4px 2px 6px;
-}
-
-.storyboard__item {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  flex: none;
-}
-
-.transition-connector {
-  position: relative;
-  flex: none;
-  z-index: 2;
-  margin: 0 -10px;
-}
-
-.transition-connector__button {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 11px;
+.storyboard__actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-}
-
-.transition-connector__button.has-transition {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
+  gap: 16px;
 }
 
 .transition-flyout__backdrop {
@@ -1001,61 +969,6 @@ button.editor__menubar-item[aria-expanded='true'] {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
-}
-
-.scene-card {
-  flex: 0 0 auto;
-  width: 140px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
-  background: var(--bg);
-}
-
-.scene-card.is-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
-}
-
-.scene-card__index {
-  font-weight: 500;
-  color: var(--text-h);
-  font-size: 12px;
-}
-
-.scene-card__duration {
-  font-size: 11px;
-  color: var(--text);
-  margin: 2px 0 8px;
-}
-
-.scene-card__actions {
-  display: flex;
-  gap: 6px;
-}
-
-.scene-card__actions button {
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 6px;
-}
-
-.storyboard__add {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.storyboard__add:hover {
-  background: var(--accent-hover);
 }
 
 /* Inspector */
@@ -1406,10 +1319,6 @@ button.editor__menubar-item[aria-expanded='true'] {
     padding: 8px 10px 12px;
   }
 
-  .scene-card {
-    width: 108px;
-  }
-
   /* タッチ操作で押しやすいよう主要なアイコンボタンを少し大きくする */
   .editor__tools-btn,
   .context-toolbar__icon-btn {
@@ -1574,6 +1483,7 @@ button.editor__menubar-item[aria-expanded='true'] {
 }
 
 .scene-timeline__scroll {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1581,14 +1491,15 @@ button.editor__menubar-item[aria-expanded='true'] {
   width: 100%;
 }
 
-/* マウス操作可能な環境（PC）ではクリック&ドラッグでスクロールできることを
-   カーソルの見た目で示す。タッチ操作のみの端末には影響しない。 */
+/* マウス操作可能な環境（PC）でautoCenter＝チップ列自体がシークバーを兼ねる
+   モードの時だけ、クリック&ドラッグでスクロールできることをカーソルの
+   見た目で示す。タッチ操作のみの端末や、通常スクロール領域のモードには影響しない。 */
 @media (pointer: fine) {
-  .scene-timeline__scroll {
+  .scene-timeline--drag .scene-timeline__scroll {
     cursor: grab;
   }
 
-  .scene-timeline__scroll:active {
+  .scene-timeline--drag .scene-timeline__scroll:active {
     cursor: grabbing;
   }
 }
@@ -1608,6 +1519,13 @@ button.editor__menubar-item[aria-expanded='true'] {
   border-radius: 1px;
   pointer-events: none;
   z-index: 2;
+}
+
+.scene-timeline__playhead--inline {
+  /* JS側でleftをpx単位で直接指定するため、中央寄せ用のオフセットは不要。
+     初期値はJS実行前のちらつきを抑えるため左端(0)にしておく。 */
+  left: 0;
+  margin-left: 0;
 }
 
 .scene-timeline__chip {

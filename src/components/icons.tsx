@@ -10,6 +10,7 @@ import {
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
   ArrowLeft,
+  ArrowLeftRight,
   Bold,
   BringToFront,
   Captions,
@@ -115,3 +116,4 @@ export const MuteOffIcon = icon(Volume2);
 export const MultiSelectIcon = icon(MousePointerSquareDashed);
 export const CopyIcon = icon(Copy);
 export const ScissorsIcon = icon(Scissors);
+export const SwapIcon = icon(ArrowLeftRight);

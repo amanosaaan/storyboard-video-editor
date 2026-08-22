@@ -1,13 +1,10 @@
-import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Project, Scene, TransitionConfig } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
-import { PauseIcon, PlayIcon, PlusIcon, ScissorsIcon } from './icons';
+import { CopyIcon, PauseIcon, PlayIcon, PlusIcon, ScissorsIcon, SwapIcon, TrashIcon } from './icons';
 import { SceneTimelineStrip } from './SceneTimelineStrip';
 
 const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: string; preview: string }[] = [
@@ -17,11 +14,13 @@ const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: stri
   { type: 'wipe', label: 'ワイプ', preview: '▤' },
 ];
 
-interface TransitionConnectorProps {
+interface TransitionButtonProps {
   scene: Scene;
+  disabled: boolean;
 }
 
-function TransitionConnector({ scene }: TransitionConnectorProps) {
+/** 選択中シーンの「次のシーンへの切り替え効果」を設定するボタン＋フライアウト */
+function TransitionButton({ scene, disabled }: TransitionButtonProps) {
   const [isOpen, setOpen] = useState(false);
   const [flyoutPos, setFlyoutPos] = useState<{ left: number; top: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -35,19 +34,16 @@ function TransitionConnector({ scene }: TransitionConnectorProps) {
   }
 
   return (
-    <div className="transition-connector">
+    <>
       <button
         ref={buttonRef}
-        className={`transition-connector__button${transitionOut ? ' has-transition' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isOpen) setOpen(false);
-          else openFlyout();
-        }}
-        aria-label="切り替え効果"
-        title="切り替え効果"
+        className="mobile-icon-btn"
+        onClick={() => (isOpen ? setOpen(false) : openFlyout())}
+        disabled={disabled}
+        title="次のシーンへの切り替え効果"
+        aria-label="次のシーンへの切り替え効果"
       >
-        {transitionOut ? TRANSITION_OPTIONS.find((o) => o.type === transitionOut.type)?.preview : '⇄'}
+        <SwapIcon size={18} />
       </button>
       {isOpen &&
         flyoutPos &&
@@ -59,95 +55,47 @@ function TransitionConnector({ scene }: TransitionConnectorProps) {
               style={{ left: flyoutPos.left, top: flyoutPos.top }}
               onClick={(e) => e.stopPropagation()}
             >
-            <h3>切り替え効果</h3>
-            <div className="transition-flyout__grid">
-              {TRANSITION_OPTIONS.map((opt) => (
-                <button
-                  key={opt.type}
-                  className={`transition-flyout__option${
-                    (transitionOut?.type ?? 'none') === opt.type ? ' is-selected' : ''
-                  }`}
-                  onClick={() =>
-                    updateScene(scene.id, {
-                      transitionOut:
-                        opt.type === 'none'
-                          ? undefined
-                          : { type: opt.type, durationMs: transitionOut?.durationMs ?? 600 },
-                    })
-                  }
-                >
-                  <span className="transition-flyout__preview">{opt.preview}</span>
-                  <span>{opt.label}</span>
-                </button>
-              ))}
-            </div>
-            {transitionOut && (
-              <label className="transition-flyout__duration">
-                長さ (秒)
-                <NumberField
-                  min={0.1}
-                  max={Math.max(0.1, scene.duration / 1000)}
-                  step={0.1}
-                  value={transitionOut.durationMs / 1000}
-                  onChange={(v) =>
-                    updateScene(scene.id, { transitionOut: { ...transitionOut, durationMs: Math.max(100, v * 1000) } })
-                  }
-                />
-              </label>
-            )}
+              <h3>切り替え効果</h3>
+              <div className="transition-flyout__grid">
+                {TRANSITION_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.type}
+                    className={`transition-flyout__option${
+                      (transitionOut?.type ?? 'none') === opt.type ? ' is-selected' : ''
+                    }`}
+                    onClick={() =>
+                      updateScene(scene.id, {
+                        transitionOut:
+                          opt.type === 'none'
+                            ? undefined
+                            : { type: opt.type, durationMs: transitionOut?.durationMs ?? 600 },
+                      })
+                    }
+                  >
+                    <span className="transition-flyout__preview">{opt.preview}</span>
+                    <span>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+              {transitionOut && (
+                <label className="transition-flyout__duration">
+                  長さ (秒)
+                  <NumberField
+                    min={0.1}
+                    max={Math.max(0.1, scene.duration / 1000)}
+                    step={0.1}
+                    value={transitionOut.durationMs / 1000}
+                    onChange={(v) =>
+                      updateScene(scene.id, { transitionOut: { ...transitionOut, durationMs: Math.max(100, v * 1000) } })
+                    }
+                  />
+                </label>
+              )}
             </div>
           </>,
           document.body,
         )}
-    </div>
-  );
-}
-
-interface SceneCardProps {
-  scene: Scene;
-  index: number;
-  isSelected: boolean;
-  onSelect: (sceneId: string) => void;
-}
-
-function SceneCard({ scene, index, isSelected, onSelect }: SceneCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: scene.id });
-  const duplicateScene = useProjectStore((s) => s.duplicateScene);
-  const removeScene = useProjectStore((s) => s.removeScene);
-
-  const style = { transform: CSS.Transform.toString(transform), transition };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`scene-card${isSelected ? ' is-selected' : ''}`}
-      onClick={() => onSelect(scene.id)}
-    >
-      <div className="scene-card__index">シーン {index + 1}</div>
-      <div className="scene-card__duration">{(scene.duration / 1000).toFixed(1)}s</div>
-      <div className="scene-card__actions">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            const newId = duplicateScene(scene.id);
-            if (newId) onSelect(newId);
-          }}
-        >
-          複製
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            removeScene(scene.id);
-          }}
-        >
-          削除
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -164,22 +112,26 @@ function formatTime(ms: number): string {
 
 export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine }: Props) {
   const addScene = useProjectStore((s) => s.addScene);
-  const reorderScenes = useProjectStore((s) => s.reorderScenes);
+  const duplicateScene = useProjectStore((s) => s.duplicateScene);
+  const removeScene = useProjectStore((s) => s.removeScene);
   const splitScene = useProjectStore((s) => s.splitScene);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const fromIndex = project.scenes.findIndex((s) => s.id === active.id);
-    const toIndex = project.scenes.findIndex((s) => s.id === over.id);
-    if (fromIndex === -1 || toIndex === -1) return;
-    reorderScenes(fromIndex, toIndex);
-  }
+  const currentSceneIndex = project.scenes.findIndex((s) => s.id === currentSceneId);
+  const currentScene = currentSceneIndex !== -1 ? project.scenes[currentSceneIndex] : null;
 
   function handleAddScene() {
     const newId = addScene();
     if (newId) onSelectScene(newId);
+  }
+
+  function handleDuplicateScene() {
+    if (!currentSceneId) return;
+    const newId = duplicateScene(currentSceneId);
+    if (newId) onSelectScene(newId);
+  }
+
+  function handleRemoveScene() {
+    if (currentSceneId) removeScene(currentSceneId);
   }
 
   function handleSplit() {
@@ -211,22 +163,39 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
           <ScissorsIcon size={16} />
         </button>
       </div>
-      <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} />
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={project.scenes.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
-          <div className="storyboard__list">
-            {project.scenes.map((scene, i) => (
-              <div className="storyboard__item" key={scene.id}>
-                <SceneCard scene={scene} index={i} isSelected={scene.id === currentSceneId} onSelect={onSelectScene} />
-                {i < project.scenes.length - 1 && <TransitionConnector scene={scene} />}
-              </div>
-            ))}
-            <button className="storyboard__add" onClick={handleAddScene} aria-label="シーン追加">
-              <PlusIcon />
-            </button>
-          </div>
-        </SortableContext>
-      </DndContext>
+      <input
+        type="range"
+        className="storyboard__seekbar"
+        min={0}
+        max={engine.totalDurationMs}
+        value={engine.currentTimeMs}
+        onChange={(e) => engine.seek(Number(e.target.value))}
+      />
+      <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
+      <div className="storyboard__actions">
+        <button
+          className="mobile-icon-btn"
+          onClick={handleDuplicateScene}
+          disabled={!currentSceneId}
+          title="このシーンを複製"
+          aria-label="このシーンを複製"
+        >
+          <CopyIcon size={18} />
+        </button>
+        <button
+          className="mobile-icon-btn"
+          onClick={handleRemoveScene}
+          disabled={!currentSceneId}
+          title="このシーンを削除"
+          aria-label="このシーンを削除"
+        >
+          <TrashIcon size={18} />
+        </button>
+        {currentScene && <TransitionButton scene={currentScene} disabled={currentSceneIndex >= project.scenes.length - 1} />}
+        <button className="mobile-scene-add" onClick={handleAddScene} aria-label="シーン追加">
+          <PlusIcon size={18} />
+        </button>
+      </div>
     </div>
   );
 }

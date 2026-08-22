@@ -244,7 +244,7 @@ export function MobileEditorView() {
           </button>
         </div>
         <div className="mobile-editor__scenes">
-          <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} />
+          <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter />
           <div className="mobile-editor__scenes-actions">
             <button
               className="mobile-icon-btn"
