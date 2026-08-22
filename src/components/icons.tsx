@@ -14,6 +14,7 @@ import {
   Captions,
   ChevronDown,
   ChevronUp,
+  Crop,
   Focus,
   FolderOpen,
   Group,
@@ -90,3 +91,4 @@ export const TextAlignLeftIcon = icon(AlignLeft);
 export const TextAlignCenterIcon = icon(AlignCenter);
 export const TextAlignRightIcon = icon(AlignRight);
 export const ImageIcon = icon(LucideImageIcon);
+export const CropIcon = icon(Crop);

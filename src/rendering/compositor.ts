@@ -10,6 +10,7 @@ export function drawSceneFrame(
   canvasHeight: number,
   resolvedAssets: ResolvedAssetMap,
   sceneTimeMs = 0,
+  hiddenLayerId?: string | null,
 ): void {
   ctx.save();
   ctx.fillStyle = scene.backgroundColor ?? '#000000';
@@ -17,6 +18,7 @@ export function drawSceneFrame(
 
   const sortedLayers = [...scene.layers].sort((a, b) => a.zIndex - b.zIndex);
   for (const layer of sortedLayers) {
+    if (layer.id === hiddenLayerId) continue;
     drawLayer(ctx, layer, resolvedAssets, sceneTimeMs);
   }
   ctx.restore();

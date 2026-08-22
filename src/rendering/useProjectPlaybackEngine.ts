@@ -12,6 +12,7 @@ export interface ProjectPlaybackEngine {
   play: () => void;
   pause: () => void;
   seek: (globalTimeMs: number) => void;
+  setHiddenLayerId: (layerId: string | null) => void;
 }
 
 // 再生中はズレが大きい時だけ補正する（毎フレーム再シークすると音声にガサガサ
@@ -58,6 +59,10 @@ export function useProjectPlaybackEngine(
   const lastUiSyncRef = useRef(0);
   const projectIdRef = useRef<string | null>(null);
   const hiddenContainerRef = useRef<HTMLDivElement | null>(null);
+  const hiddenLayerIdRef = useRef<string | null>(null);
+  const setHiddenLayerId = useCallback((layerId: string | null) => {
+    hiddenLayerIdRef.current = layerId;
+  }, []);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -298,6 +303,7 @@ export function useProjectPlaybackEngine(
                 project.resolution.height,
                 assetsRef.current,
                 position.localTimeMs,
+                hiddenLayerIdRef.current,
               );
             }
           }
@@ -345,5 +351,6 @@ export function useProjectPlaybackEngine(
     play,
     pause,
     seek,
+    setHiddenLayerId,
   };
 }

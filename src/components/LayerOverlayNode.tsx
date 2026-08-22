@@ -9,11 +9,13 @@ interface Props {
   isSelected: boolean;
   onSelect: (additive: boolean) => void;
   onChange: (patch: { x: number; y: number; width: number; height: number; rotation: number }) => void;
+  onDoubleClick?: () => void;
+  hidden?: boolean;
 }
 
 const MIN_SIZE = 10;
 
-export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange }: Props) {
+export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange, onDoubleClick, hidden }: Props) {
   const shapeRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -26,6 +28,8 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange 
 
   const scaledWidth = layer.width * scale;
   const scaledHeight = layer.height * scale;
+
+  if (hidden) return null;
 
   return (
     <>
@@ -48,6 +52,8 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange 
         draggable
         onClick={(e) => onSelect(e.evt.shiftKey)}
         onTap={(e) => onSelect('shiftKey' in e.evt && e.evt.shiftKey)}
+        onDblClick={onDoubleClick}
+        onDblTap={onDoubleClick}
         onDragEnd={(e) => {
           const node = e.target;
           onChange({

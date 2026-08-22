@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createCaptionLayer, createImageLayerForScene, createTextLayer } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
+import type { ImageLayer } from '../domain/types';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { addMediaFile } from '../storage/mediaRepository';
@@ -9,6 +10,7 @@ import { useProjectStore } from '../state/projectStore';
 import { ArrangeMenu } from './ArrangeMenu';
 import { ContextToolbar } from './ContextToolbar';
 import { EditorToolbar } from './EditorToolbar';
+import { ImageCropModal } from './ImageCropModal';
 import { BackIcon, CaptionIcon, FolderOpenIcon, ImageIcon, TextIcon } from './icons';
 import { Inspector } from './Inspector';
 import { MediaLibraryPanel } from './MediaLibraryPanel';
@@ -25,11 +27,13 @@ export function EditorView() {
   const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
   const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
   const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
+  const updateLayer = useProjectStore((s) => s.updateLayer);
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
   const [isMediaOpen, setMediaOpen] = useState(false);
   const [isRecordingOpen, setRecordingOpen] = useState(false);
+  const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const engine = useProjectPlaybackEngine(canvasRef, project);
@@ -55,6 +59,9 @@ export function EditorView() {
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
   const selectedLayers = currentScene.layers.filter((l) => selectedLayerIds.includes(l.id));
+  const croppingLayer = currentScene.layers.find(
+    (l): l is ImageLayer => l.id === croppingImageLayerId && l.type === 'image',
+  );
 
   async function handleQuickInsertImages(files: FileList | null) {
     if (!files || !project) return;
@@ -166,11 +173,21 @@ export function EditorView() {
         </span>
       </nav>
       <EditorToolbar />
-      <ContextToolbar project={project} scene={currentScene} layers={selectedLayers} />
+      <ContextToolbar
+        project={project}
+        scene={currentScene}
+        layers={selectedLayers}
+        onOpenCrop={(layerId) => setCroppingImageLayerId(layerId)}
+      />
       <div className="editor__body">
         <div className="editor__center">
           <div className="editor__preview-area">
-            <PreviewPanel project={project} canvasRef={canvasRef} engine={engine} />
+            <PreviewPanel
+              project={project}
+              canvasRef={canvasRef}
+              engine={engine}
+              onOpenCrop={(layerId) => setCroppingImageLayerId(layerId)}
+            />
           </div>
           <StoryboardPanel
             project={project}
@@ -200,6 +217,16 @@ export function EditorView() {
       />
       {isMediaOpen && <MediaLibraryPanel project={project} scene={currentScene} onClose={() => setMediaOpen(false)} />}
       {isRecordingOpen && <RecordingPanel project={project} onClose={() => setRecordingOpen(false)} />}
+      {croppingLayer && (
+        <ImageCropModal
+          layer={croppingLayer}
+          onConfirm={(crop) => {
+            updateLayer(currentScene.id, croppingLayer.id, { crop });
+            setCroppingImageLayerId(null);
+          }}
+          onCancel={() => setCroppingImageLayerId(null)}
+        />
+      )}
     </div>
   );
 }
