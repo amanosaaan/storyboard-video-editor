@@ -335,6 +335,25 @@ export function useProjectPlaybackEngine(
       timeRef.current = 0;
       setCurrentTimeMsDisplay(0);
     }
+    // ブラウザの自動再生ポリシー対策: video/audioのplay()は、ユーザー操作（タップ/クリック）
+    // ハンドラの同期呼び出しの中で行わないとブロックされることがある（特にiOS Safari）。
+    // rAFループ側で非同期にplay()を呼んでいるだけだと、再生ボタンを押しても実際には
+    // ブロックされて再生されない（音も出ない）ことがあるため、ボタン押下と同じ
+    // 呼び出しスタック内で現在シーンの動画・音声のplay()を先に呼んでおく。
+    if (project) {
+      const position = resolvePosition(project, timeRef.current);
+      if (position) {
+        for (const layer of position.scene.layers) {
+          if (layer.type === 'video') {
+            const el = assetsRef.current.get(layer.mediaId);
+            if (el instanceof HTMLVideoElement && el.paused) void el.play().catch(() => {});
+          } else if (layer.type === 'audio') {
+            const el = audioAssetsRef.current.get(layer.mediaId);
+            if (el && el.paused) void el.play().catch(() => {});
+          }
+        }
+      }
+    }
     setIsPlaying(true);
   }, [project]);
 
