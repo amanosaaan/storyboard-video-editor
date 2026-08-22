@@ -1563,18 +1563,26 @@ button.editor__menubar-item[aria-expanded='true'] {
   gap: 8px;
 }
 
-.mobile-editor__scenes-scroll {
+.mobile-editor__scenes-viewport {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
   flex: 1;
   min-width: 0;
 }
 
+.mobile-editor__scenes-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  width: 100%;
+}
+
 .mobile-editor__playhead {
+  /* スクロールする.mobile-editor__scenes-scrollの外側（.mobile-editor__scenes-viewportの
+     直接の子）に置いているため、scrollLeftの影響を受けず常に中央に固定表示される。
+     追従はJS側でscrollLeftを調整して行う。 */
   position: absolute;
+  left: 50%;
   top: 0;
   bottom: 0;
   width: 2px;

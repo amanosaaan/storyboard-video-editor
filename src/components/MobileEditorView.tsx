@@ -51,6 +51,13 @@ function sceneChipWidth(durationMs: number): number {
   return Math.max(SCENE_CHIP_MIN_WIDTH, durationMs * SCENE_CHIP_PX_PER_MS);
 }
 
+/** 現在の再生位置が、チップ列の先頭から何px進んだ位置に当たるかを正確に計算する */
+function computeTimelineOffsetPx(scenes: Scene[], sceneIndex: number, localTimeMs: number, sceneDurationMs: number): number {
+  const precedingWidth = scenes.slice(0, sceneIndex).reduce((sum, s) => sum + sceneChipWidth(s.duration) + SCENE_CHIP_GAP, 0);
+  const progress = sceneDurationMs > 0 ? Math.min(1, Math.max(0, localTimeMs / sceneDurationMs)) : 0;
+  return precedingWidth + progress * sceneChipWidth(sceneDurationMs);
+}
+
 /** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
 function getSceneMainMediaId(scene: Scene): string | null {
   const visual = scene.layers
@@ -98,6 +105,7 @@ export function MobileEditorView() {
   const previewRef = useRef<HTMLDivElement>(null);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
   const [sceneThumbUrls, setSceneThumbUrls] = useState<Record<string, string>>({});
+  const scenesScrollRef = useRef<HTMLDivElement>(null);
 
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
@@ -148,6 +156,16 @@ export function MobileEditorView() {
       cancelled = true;
     };
   }, [project]);
+
+  // CapCutと同様、再生位置を示す線は常に画面中央に固定し、シーンチップ側を
+  // 横スクロールさせて追従させる。
+  useEffect(() => {
+    const container = scenesScrollRef.current;
+    const position = engine.position;
+    if (!container || !position || !project) return;
+    const offset = computeTimelineOffsetPx(project.scenes, position.sceneIndex, position.localTimeMs, position.scene.duration);
+    container.scrollLeft = offset - container.clientWidth / 2;
+  }, [engine.position, project]);
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
@@ -293,41 +311,25 @@ export function MobileEditorView() {
           onChange={(e) => engine.seek(Number(e.target.value))}
         />
         <div className="mobile-editor__scenes">
-          <div className="mobile-editor__scenes-scroll">
-            {project.scenes.map((scene, i) => (
-              <button
-                key={scene.id}
-                className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
-                style={{
-                  width: sceneChipWidth(scene.duration),
-                  ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
-                }}
-                onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
-              >
-                {i + 1}
-              </button>
-            ))}
-            {engine.position && (
-              <div
-                className="mobile-editor__playhead"
-                style={{
-                  left:
-                    project.scenes
-                      .slice(0, engine.position.sceneIndex)
-                      .reduce((sum, s) => sum + sceneChipWidth(s.duration) + SCENE_CHIP_GAP, 0) +
-                    Math.min(
-                      1,
-                      Math.max(
-                        0,
-                        engine.position.scene.duration > 0
-                          ? engine.position.localTimeMs / engine.position.scene.duration
-                          : 0,
-                      ),
-                    ) *
-                      sceneChipWidth(engine.position.scene.duration),
-                }}
-              />
-            )}
+          <div className="mobile-editor__scenes-viewport">
+            <div className="mobile-editor__scenes-scroll" ref={scenesScrollRef}>
+              {project.scenes.map((scene, i) => (
+                <button
+                  key={scene.id}
+                  className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
+                  style={{
+                    width: sceneChipWidth(scene.duration),
+                    ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
+                  }}
+                  onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            {/* スクロールするコンテナの外(兄弟要素)に置くことで、scrollLeftの影響を受けず
+                常に画面中央に固定表示される。追従はJS側でscrollLeftを調整して行う。 */}
+            {engine.position && <div className="mobile-editor__playhead" />}
           </div>
           <div className="mobile-editor__scenes-actions">
             <button
