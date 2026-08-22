@@ -58,6 +58,26 @@ function computeTimelineOffsetPx(scenes: Scene[], sceneIndex: number, localTimeM
   return precedingWidth + progress * sceneChipWidth(sceneDurationMs);
 }
 
+/** computeTimelineOffsetPxの逆変換。チップ列内のpx位置から、対応する全体タイムライン上のミリ秒を求める。 */
+function timelineOffsetPxToGlobalMs(scenes: Scene[], offsetPx: number): number {
+  const clamped = Math.max(0, offsetPx);
+  let pxAcc = 0;
+  let msAcc = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const scene = scenes[i];
+    const w = sceneChipWidth(scene.duration);
+    const isLast = i === scenes.length - 1;
+    if (clamped < pxAcc + w || isLast) {
+      const localPx = Math.min(Math.max(clamped - pxAcc, 0), w);
+      const fraction = w > 0 ? localPx / w : 0;
+      return msAcc + fraction * scene.duration;
+    }
+    pxAcc += w + SCENE_CHIP_GAP;
+    msAcc += scene.duration;
+  }
+  return msAcc;
+}
+
 /** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
 function getSceneMainMediaId(scene: Scene): string | null {
   const visual = scene.layers
@@ -106,6 +126,12 @@ export function MobileEditorView() {
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
   const [sceneThumbUrls, setSceneThumbUrls] = useState<Record<string, string>>({});
   const scenesScrollRef = useRef<HTMLDivElement>(null);
+  // 自動で中央寄せするためにこちらでscrollLeftを書き換えたときの「狙った値」を覚えておき、
+  // 実際に発火したscrollイベントの値がそれと一致する場合だけ「自分で起こしたスクロール」と
+  // 判定して無視する。真偽フラグ方式だと、ブラウザがscrollイベントを非同期・間引きして
+  // 発火させるタイミングとズレたときに、ユーザーの連続ドラッグ中の別のスクロールまで
+  // 誤って無視してしまうことがあるため、値ベースで判定する。
+  const lastProgrammaticScrollLeftRef = useRef<number | null>(null);
 
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
@@ -164,8 +190,27 @@ export function MobileEditorView() {
     const position = engine.position;
     if (!container || !position || !project) return;
     const offset = computeTimelineOffsetPx(project.scenes, position.sceneIndex, position.localTimeMs, position.scene.duration);
-    container.scrollLeft = offset - container.clientWidth / 2;
+    const target = offset - container.clientWidth / 2;
+    if (Math.abs(container.scrollLeft - target) > 0.5) {
+      lastProgrammaticScrollLeftRef.current = target;
+      container.scrollLeft = target;
+    }
   }, [engine.position, project]);
+
+  // ユーザーがシーンチップ列を直接ドラッグ/スクロールしたら、その位置を再生位置として
+  // 扱う（＝チップ列自体がシークバーを兼ねる）。上の自動中央寄せ処理によるscrollLeftの
+  // 書き換えで発火したscrollイベントは、実際の値が「狙った値」と一致する場合のみ無視する。
+  function handleScenesScroll() {
+    const container = scenesScrollRef.current;
+    if (!container || !project) return;
+    const expected = lastProgrammaticScrollLeftRef.current;
+    if (expected !== null && Math.abs(container.scrollLeft - expected) < 1) {
+      lastProgrammaticScrollLeftRef.current = null;
+      return;
+    }
+    const centerOffset = container.scrollLeft + container.clientWidth / 2;
+    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, centerOffset));
+  }
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
@@ -302,17 +347,9 @@ export function MobileEditorView() {
             <ScissorsIcon size={16} />
           </button>
         </div>
-        <input
-          className="mobile-editor__seekbar"
-          type="range"
-          min={0}
-          max={engine.totalDurationMs}
-          value={engine.currentTimeMs}
-          onChange={(e) => engine.seek(Number(e.target.value))}
-        />
         <div className="mobile-editor__scenes">
           <div className="mobile-editor__scenes-viewport">
-            <div className="mobile-editor__scenes-scroll" ref={scenesScrollRef}>
+            <div className="mobile-editor__scenes-scroll" ref={scenesScrollRef} onScroll={handleScenesScroll}>
               {project.scenes.map((scene, i) => (
                 <button
                   key={scene.id}

@@ -1551,16 +1551,11 @@ button.editor__menubar-item[aria-expanded='true'] {
   color: var(--text);
 }
 
-.mobile-editor__seekbar {
-  width: 100%;
-  accent-color: var(--accent);
-  margin-bottom: 10px;
-}
-
 .mobile-editor__scenes {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .mobile-editor__scenes-viewport {
