@@ -891,6 +891,10 @@ button.editor__menubar-item[aria-expanded='true'] {
   text-align: center;
 }
 
+.storyboard__split {
+  margin-left: auto;
+}
+
 .storyboard__seekbar {
   width: 100%;
   margin: 0 0 6px;
@@ -1535,10 +1539,16 @@ button.editor__menubar-item[aria-expanded='true'] {
   padding: 4px 14px 10px;
 }
 
+.mobile-editor__time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
 .mobile-editor__time {
   font-size: 12px;
   color: var(--text);
-  margin-bottom: 4px;
 }
 
 .mobile-editor__seekbar {

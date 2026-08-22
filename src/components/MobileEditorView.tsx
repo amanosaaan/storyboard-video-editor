@@ -28,6 +28,7 @@ import {
   PlusIcon,
   RecordIcon,
   RedoIcon,
+  ScissorsIcon,
   ShapeIcon,
   TextIcon,
   TrashIcon,
@@ -59,6 +60,7 @@ export function MobileEditorView() {
   const addScene = useProjectStore((s) => s.addScene);
   const duplicateScene = useProjectStore((s) => s.duplicateScene);
   const removeScene = useProjectStore((s) => s.removeScene);
+  const splitScene = useProjectStore((s) => s.splitScene);
   const canUndo = useProjectStore((s) => s.past.length > 0);
   const canRedo = useProjectStore((s) => s.future.length > 0);
   const undo = useProjectStore((s) => s.undo);
@@ -165,6 +167,16 @@ export function MobileEditorView() {
     if (currentSceneId) removeScene(currentSceneId);
   }
 
+  function handleSplitScene() {
+    const position = engine.position;
+    if (!position) return;
+    // グローバル時刻自体は変わらないため、分割後は自動的に新しい後半シーンの先頭に位置する
+    // （resolvePositionが境界ちょうどの時刻を次シーンの先頭として扱うため、seek不要）。
+    splitScene(position.scene.id, position.localTimeMs);
+  }
+
+  const canSplit = !!engine.position && engine.position.localTimeMs > 0 && engine.position.localTimeMs < engine.position.scene.duration;
+
   return (
     <div className="mobile-editor">
       <header className="mobile-editor__top">
@@ -221,8 +233,19 @@ export function MobileEditorView() {
       </div>
 
       <div className="mobile-editor__timeline">
-        <div className="mobile-editor__time">
-          {formatTime(engine.currentTimeMs)} / {formatTime(engine.totalDurationMs)}
+        <div className="mobile-editor__time-row">
+          <div className="mobile-editor__time">
+            {formatTime(engine.currentTimeMs)} / {formatTime(engine.totalDurationMs)}
+          </div>
+          <button
+            className="mobile-icon-btn"
+            onClick={handleSplitScene}
+            disabled={!canSplit}
+            title="再生位置でシーンを分割"
+            aria-label="再生位置でシーンを分割"
+          >
+            <ScissorsIcon size={16} />
+          </button>
         </div>
         <input
           className="mobile-editor__seekbar"

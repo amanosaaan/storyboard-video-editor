@@ -35,6 +35,7 @@ import {
   Plus,
   RotateCcw,
   RotateCw,
+  Scissors,
   Search,
   SendToBack,
   Shapes,
@@ -113,3 +114,4 @@ export const MuteOnIcon = icon(VolumeX);
 export const MuteOffIcon = icon(Volume2);
 export const MultiSelectIcon = icon(MousePointerSquareDashed);
 export const CopyIcon = icon(Copy);
+export const ScissorsIcon = icon(Scissors);

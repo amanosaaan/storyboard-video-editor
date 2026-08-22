@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { create } from 'zustand';
+import { splitSceneAt } from '../domain/timeline';
 import type { AspectRatio, Layer, MediaAsset, Project, Scene } from '../domain/types';
 import { ASPECT_RATIO_RESOLUTIONS } from '../domain/types';
 
@@ -17,6 +18,7 @@ interface EditorState {
   addScene: () => string | null;
   removeScene: (sceneId: string) => void;
   duplicateScene: (sceneId: string) => string | null;
+  splitScene: (sceneId: string, localTimeMs: number) => string | null;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   updateSceneDuration: (sceneId: string, duration: number) => void;
   updateScene: (sceneId: string, patch: Partial<Scene>) => void;
@@ -99,6 +101,15 @@ export const useProjectStore = create<EditorState>((set, get) => {
       scenes.splice(index + 1, 0, copy);
       commit({ ...state.project, scenes, ...touch() }, { selectedLayerIds: [] });
       return copy.id;
+    },
+
+    splitScene: (sceneId, localTimeMs) => {
+      const state = get();
+      if (!state.project) return null;
+      const result = splitSceneAt(state.project.scenes, sceneId, localTimeMs);
+      if (!result) return null;
+      commit({ ...state.project, scenes: result.scenes, ...touch() }, { selectedLayerIds: [] });
+      return result.newSceneId;
     },
 
     reorderScenes: (fromIndex, toIndex) => {

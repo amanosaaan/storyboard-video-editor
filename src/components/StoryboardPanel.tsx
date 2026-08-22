@@ -7,7 +7,7 @@ import type { Project, Scene, TransitionConfig } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
-import { PauseIcon, PlayIcon, PlusIcon } from './icons';
+import { PauseIcon, PlayIcon, PlusIcon, ScissorsIcon } from './icons';
 
 const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: string; preview: string }[] = [
   { type: 'none', label: 'なし', preview: '—' },
@@ -164,6 +164,7 @@ function formatTime(ms: number): string {
 export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine }: Props) {
   const addScene = useProjectStore((s) => s.addScene);
   const reorderScenes = useProjectStore((s) => s.reorderScenes);
+  const splitScene = useProjectStore((s) => s.splitScene);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   function handleDragEnd(event: DragEndEvent) {
@@ -180,6 +181,16 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
     if (newId) onSelectScene(newId);
   }
 
+  function handleSplit() {
+    const position = engine.position;
+    if (!position) return;
+    // グローバル時刻自体は変わらないため、分割後は自動的に新しい後半シーンの先頭に位置する
+    // （resolvePositionが境界ちょうどの時刻を次シーンの先頭として扱うため、seek不要）。
+    splitScene(position.scene.id, position.localTimeMs);
+  }
+
+  const canSplit = !!engine.position && engine.position.localTimeMs > 0 && engine.position.localTimeMs < engine.position.scene.duration;
+
   return (
     <div className="storyboard">
       <div className="storyboard__header">
@@ -189,6 +200,15 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         <span className="storyboard__time">
           {formatTime(engine.currentTimeMs)}s / {formatTime(engine.totalDurationMs)}s
         </span>
+        <button
+          className="btn-icon storyboard__split"
+          onClick={handleSplit}
+          disabled={!canSplit}
+          title="再生位置でシーンを分割"
+          aria-label="再生位置でシーンを分割"
+        >
+          <ScissorsIcon size={16} />
+        </button>
       </div>
       <input
         type="range"
