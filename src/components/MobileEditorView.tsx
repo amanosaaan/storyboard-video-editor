@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createCaptionLayer, createImageLayerForScene, createShapeLayer, createTextLayer } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
 import type { ImageLayer } from '../domain/types';
@@ -61,6 +61,19 @@ export function MobileEditorView() {
   const [isMediaOpen, setMediaOpen] = useState(false);
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
+
+  // CapCutと同様、キャンバスで要素を選択したら自動でプロパティ編集シートを開き、
+  // 選択解除したら自動で閉じる（配置タブからの手動オープンはそのまま維持）。
+  const wasSelectionEmptyRef = useRef(true);
+  useEffect(() => {
+    const isEmpty = selectedLayerIds.length === 0;
+    if (!isEmpty && wasSelectionEmptyRef.current) {
+      setArrangeOpen(true);
+    } else if (isEmpty && !wasSelectionEmptyRef.current) {
+      setArrangeOpen(false);
+    }
+    wasSelectionEmptyRef.current = isEmpty;
+  }, [selectedLayerIds]);
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
