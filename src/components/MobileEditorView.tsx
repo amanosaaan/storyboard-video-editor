@@ -6,7 +6,13 @@ import {
   createTextLayer,
   cropPatch,
 } from '../domain/layerFactory';
-import { getSceneStartMs } from '../domain/timeline';
+import {
+  getSceneStartMs,
+  resolvePosition,
+  sceneChipWidthPx,
+  timelineOffsetPxToGlobalMs,
+  timelinePositionToOffsetPx,
+} from '../domain/timeline';
 import type { ImageLayer, Scene } from '../domain/types';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
@@ -38,45 +44,6 @@ import {
 import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { RecordingPanel } from './RecordingPanel';
-
-// .mobile-editor__scenes-scroll の gap（index.css）と一致させること。
-const SCENE_CHIP_GAP = 8;
-// シーンチップの横幅は動画の長さに正確に比例させる（1秒あたりのpx数）。
-const SCENE_CHIP_PX_PER_MS = 0.02; // 20px/秒
-// あまりに短いシーンだとタップできない/見えなくなるため最低幅を設ける。
-const SCENE_CHIP_MIN_WIDTH = 32;
-
-/** シーンの長さに比例したチップの表示幅(px)を返す（最低幅あり） */
-function sceneChipWidth(durationMs: number): number {
-  return Math.max(SCENE_CHIP_MIN_WIDTH, durationMs * SCENE_CHIP_PX_PER_MS);
-}
-
-/** 現在の再生位置が、チップ列の先頭から何px進んだ位置に当たるかを正確に計算する */
-function computeTimelineOffsetPx(scenes: Scene[], sceneIndex: number, localTimeMs: number, sceneDurationMs: number): number {
-  const precedingWidth = scenes.slice(0, sceneIndex).reduce((sum, s) => sum + sceneChipWidth(s.duration) + SCENE_CHIP_GAP, 0);
-  const progress = sceneDurationMs > 0 ? Math.min(1, Math.max(0, localTimeMs / sceneDurationMs)) : 0;
-  return precedingWidth + progress * sceneChipWidth(sceneDurationMs);
-}
-
-/** computeTimelineOffsetPxの逆変換。チップ列内のpx位置から、対応する全体タイムライン上のミリ秒を求める。 */
-function timelineOffsetPxToGlobalMs(scenes: Scene[], offsetPx: number): number {
-  const clamped = Math.max(0, offsetPx);
-  let pxAcc = 0;
-  let msAcc = 0;
-  for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i];
-    const w = sceneChipWidth(scene.duration);
-    const isLast = i === scenes.length - 1;
-    if (clamped < pxAcc + w || isLast) {
-      const localPx = Math.min(Math.max(clamped - pxAcc, 0), w);
-      const fraction = w > 0 ? localPx / w : 0;
-      return msAcc + fraction * scene.duration;
-    }
-    pxAcc += w + SCENE_CHIP_GAP;
-    msAcc += scene.duration;
-  }
-  return msAcc;
-}
 
 /** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
 function getSceneMainMediaId(scene: Scene): string | null {
@@ -132,6 +99,18 @@ export function MobileEditorView() {
   // 発火させるタイミングとズレたときに、ユーザーの連続ドラッグ中の別のスクロールまで
   // 誤って無視してしまうことがあるため、値ベースで判定する。
   const lastProgrammaticScrollLeftRef = useRef<number | null>(null);
+  // ユーザーが指でドラッグ中（またはその余韻の慣性スクロール中）は、自動追従が
+  // scrollLeftを書き換えて指の動きと取り合いにならないよう一時的に止める。
+  // 「押した瞬間」だけでなく「スクロールが実際に静止するまで」判定したいので、
+  // scrollイベントが来るたびにタイマーを延長する方式にする（慣性スクロールも
+  // pointerup後にscrollイベントが出続けるため、ボタンイベントだけでは検知できない）。
+  const isUserScrollingRef = useRef(false);
+  const resumeAutoScrollTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (resumeAutoScrollTimeoutRef.current !== null) window.clearTimeout(resumeAutoScrollTimeoutRef.current);
+    };
+  }, []);
 
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
@@ -183,22 +162,40 @@ export function MobileEditorView() {
     };
   }, [project]);
 
-  // CapCutと同様、再生位置を示す線は常に画面中央に固定し、シーンチップ側を
-  // 横スクロールさせて追従させる。
+  // CapCutと同様、再生位置を示す線は常に画面中央に固定し、シーンチップ側を横スクロール
+  // させて追従させる。engine.position（約66ms間隔でしか更新されないReact state）ではなく
+  // engine.getLiveTimeMs()を毎フレーム読むrAFループで追従させることで、再生中の
+  // スクロールを滑らかにする（stateの間引きに引っ張られてカクつくのを防ぐ）。
   useEffect(() => {
-    const container = scenesScrollRef.current;
-    const position = engine.position;
-    if (!container || !position || !project) return;
-    const offset = computeTimelineOffsetPx(project.scenes, position.sceneIndex, position.localTimeMs, position.scene.duration);
-    const target = offset - container.clientWidth / 2;
-    if (Math.abs(container.scrollLeft - target) > 0.5) {
-      lastProgrammaticScrollLeftRef.current = target;
-      container.scrollLeft = target;
+    if (!project) return;
+    let raf = 0;
+    function tick() {
+      const container = scenesScrollRef.current;
+      // ユーザーがドラッグ中/慣性スクロール中は指の動きを優先し、自動追従は行わない。
+      if (container && project && !isUserScrollingRef.current) {
+        const position = resolvePosition(project, engine.getLiveTimeMs());
+        if (position) {
+          const offset = timelinePositionToOffsetPx(
+            project.scenes,
+            position.sceneIndex,
+            position.localTimeMs,
+            position.scene.duration,
+          );
+          const target = offset - container.clientWidth / 2;
+          if (Math.abs(container.scrollLeft - target) > 0.5) {
+            lastProgrammaticScrollLeftRef.current = target;
+            container.scrollLeft = target;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
     }
-  }, [engine.position, project]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [project, engine.getLiveTimeMs]);
 
   // ユーザーがシーンチップ列を直接ドラッグ/スクロールしたら、その位置を再生位置として
-  // 扱う（＝チップ列自体がシークバーを兼ねる）。上の自動中央寄せ処理によるscrollLeftの
+  // 扱う（＝チップ列自体がシークバーを兼ねる）。上の自動追従処理によるscrollLeftの
   // 書き換えで発火したscrollイベントは、実際の値が「狙った値」と一致する場合のみ無視する。
   function handleScenesScroll() {
     const container = scenesScrollRef.current;
@@ -208,6 +205,14 @@ export function MobileEditorView() {
       lastProgrammaticScrollLeftRef.current = null;
       return;
     }
+    // ユーザー操作由来のスクロール。しばらく自動追従を止め、スクロールが止まったら再開する。
+    isUserScrollingRef.current = true;
+    if (resumeAutoScrollTimeoutRef.current !== null) window.clearTimeout(resumeAutoScrollTimeoutRef.current);
+    resumeAutoScrollTimeoutRef.current = window.setTimeout(() => {
+      isUserScrollingRef.current = false;
+      resumeAutoScrollTimeoutRef.current = null;
+    }, 150);
+
     const centerOffset = container.scrollLeft + container.clientWidth / 2;
     engine.seek(timelineOffsetPxToGlobalMs(project.scenes, centerOffset));
   }
@@ -355,7 +360,7 @@ export function MobileEditorView() {
                   key={scene.id}
                   className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
                   style={{
-                    width: sceneChipWidth(scene.duration),
+                    width: sceneChipWidthPx(scene.duration),
                     ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
                   }}
                   onClick={() => engine.seek(getSceneStartMs(project, scene.id))}

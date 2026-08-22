@@ -75,3 +75,45 @@ export function splitSceneAt(
   newScenes.splice(index, 1, firstScene, secondScene);
   return { scenes: newScenes, newSceneId: secondScene.id };
 }
+
+// シーンチップ列（スマホの横スクロールするシーン一覧）の見た目の幅と、
+// 実際の再生時刻(ms)を相互変換するための定数・関数。
+// forward(time→px)とinverse(px→time)が必ず同じ定数を参照するよう、ここに集約する
+// （別々の場所に置くとズレて丸め誤差の温床になる）。
+export const SCENE_CHIP_GAP_PX = 8;
+// 1msあたりのpx数（20px/秒）
+const SCENE_CHIP_PX_PER_MS = 0.02;
+// あまりに短いシーンだとタップできない/見えなくなるため最低幅を設ける。
+const SCENE_CHIP_MIN_WIDTH_PX = 32;
+
+/** シーンの長さに比例したチップの表示幅(px)を返す（最低幅あり） */
+export function sceneChipWidthPx(durationMs: number): number {
+  return Math.max(SCENE_CHIP_MIN_WIDTH_PX, durationMs * SCENE_CHIP_PX_PER_MS);
+}
+
+/** 指定したシーン・シーン内ローカル時刻が、チップ列の先頭から何px進んだ位置に当たるかを計算する */
+export function timelinePositionToOffsetPx(scenes: Scene[], sceneIndex: number, localTimeMs: number, sceneDurationMs: number): number {
+  const precedingWidth = scenes.slice(0, sceneIndex).reduce((sum, s) => sum + sceneChipWidthPx(s.duration) + SCENE_CHIP_GAP_PX, 0);
+  const progress = sceneDurationMs > 0 ? Math.min(1, Math.max(0, localTimeMs / sceneDurationMs)) : 0;
+  return precedingWidth + progress * sceneChipWidthPx(sceneDurationMs);
+}
+
+/** timelinePositionToOffsetPxの逆変換。チップ列内のpx位置から、対応する全体タイムライン上のミリ秒を求める。 */
+export function timelineOffsetPxToGlobalMs(scenes: Scene[], offsetPx: number): number {
+  const clamped = Math.max(0, offsetPx);
+  let pxAcc = 0;
+  let msAcc = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const scene = scenes[i];
+    const w = sceneChipWidthPx(scene.duration);
+    const isLast = i === scenes.length - 1;
+    if (clamped < pxAcc + w || isLast) {
+      const localPx = Math.min(Math.max(clamped - pxAcc, 0), w);
+      const fraction = w > 0 ? localPx / w : 0;
+      return msAcc + fraction * scene.duration;
+    }
+    pxAcc += w + SCENE_CHIP_GAP_PX;
+    msAcc += scene.duration;
+  }
+  return msAcc;
+}

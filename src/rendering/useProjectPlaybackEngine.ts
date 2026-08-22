@@ -13,6 +13,12 @@ export interface ProjectPlaybackEngine {
   pause: () => void;
   seek: (globalTimeMs: number) => void;
   setHiddenLayerId: (layerId: string | null) => void;
+  /**
+   * React state（currentTimeMs/position）を経由しない、間引き無しの現在時刻。
+   * currentTimeMsはUIの再描画頻度を抑えるため約66ms間隔でしか更新されないので、
+   * スクロール位置の追従など毎フレーム滑らかに動かしたい用途はこちらを使う。
+   */
+  getLiveTimeMs: () => number;
 }
 
 // 再生中はズレが大きい時だけ補正する（毎フレーム再シークすると音声にガサガサ
@@ -343,6 +349,8 @@ export function useProjectPlaybackEngine(
     [project],
   );
 
+  const getLiveTimeMs = useCallback(() => timeRef.current, []);
+
   return {
     isPlaying,
     currentTimeMs: currentTimeMsDisplay,
@@ -352,5 +360,6 @@ export function useProjectPlaybackEngine(
     pause,
     seek,
     setHiddenLayerId,
+    getLiveTimeMs,
   };
 }
