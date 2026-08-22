@@ -1596,8 +1596,9 @@ button.editor__menubar-item[aria-expanded='true'] {
 }
 
 .mobile-scene-chip {
+  /* 横幅は動画の長さに比例させてJS側(sceneChipWidth)でインラインstyleとして設定するため、
+     flex-shrink/growさせず常に指定通りの幅を保つ。 */
   flex: none;
-  width: 56px;
   height: 56px;
   border-radius: 10px;
   border: 2px solid transparent;

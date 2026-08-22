@@ -39,9 +39,17 @@ import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { RecordingPanel } from './RecordingPanel';
 
-// .mobile-scene-chip の width と .mobile-editor__scenes-scroll の gap（index.css）と一致させること。
-const SCENE_CHIP_WIDTH = 56;
+// .mobile-editor__scenes-scroll の gap（index.css）と一致させること。
 const SCENE_CHIP_GAP = 8;
+// シーンチップの横幅は動画の長さに正確に比例させる（1秒あたりのpx数）。
+const SCENE_CHIP_PX_PER_MS = 0.02; // 20px/秒
+// あまりに短いシーンだとタップできない/見えなくなるため最低幅を設ける。
+const SCENE_CHIP_MIN_WIDTH = 32;
+
+/** シーンの長さに比例したチップの表示幅(px)を返す（最低幅あり） */
+function sceneChipWidth(durationMs: number): number {
+  return Math.max(SCENE_CHIP_MIN_WIDTH, durationMs * SCENE_CHIP_PX_PER_MS);
+}
 
 /** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
 function getSceneMainMediaId(scene: Scene): string | null {
@@ -290,7 +298,10 @@ export function MobileEditorView() {
               <button
                 key={scene.id}
                 className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
-                style={sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined}
+                style={{
+                  width: sceneChipWidth(scene.duration),
+                  ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
+                }}
                 onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
               >
                 {i + 1}
@@ -301,7 +312,9 @@ export function MobileEditorView() {
                 className="mobile-editor__playhead"
                 style={{
                   left:
-                    engine.position.sceneIndex * (SCENE_CHIP_WIDTH + SCENE_CHIP_GAP) +
+                    project.scenes
+                      .slice(0, engine.position.sceneIndex)
+                      .reduce((sum, s) => sum + sceneChipWidth(s.duration) + SCENE_CHIP_GAP, 0) +
                     Math.min(
                       1,
                       Math.max(
@@ -311,7 +324,7 @@ export function MobileEditorView() {
                           : 0,
                       ),
                     ) *
-                      SCENE_CHIP_WIDTH,
+                      sceneChipWidth(engine.position.scene.duration),
                 }}
               />
             )}
