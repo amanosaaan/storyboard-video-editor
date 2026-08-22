@@ -1347,21 +1347,8 @@ button.editor__menubar-item[aria-expanded='true'] {
   }
 }
 
-/* ===== Mobile editor (CapCut風) ===== */
+/* ===== Mobile editor (CapCut風レイアウト、配色はPCと同じライトテーマ) ===== */
 .mobile-editor {
-  --bg: #1e1e1e;
-  --bg-app: #121212;
-  --bg-panel: #1e1e1e;
-  --bg-hover: #2c2c2c;
-  --border: #333333;
-  --text: #a3a3a3;
-  --text-h: #ffffff;
-  --accent: #35e6cf;
-  --accent-hover: #2ad0bb;
-  --accent-soft: rgba(53, 230, 207, 0.16);
-  --accent-contrast: #08211d;
-  --danger: #ff5470;
-
   height: 100svh;
   display: flex;
   flex-direction: column;
@@ -1588,26 +1575,3 @@ button.editor__menubar-item[aria-expanded='true'] {
   padding: 20px 0;
 }
 
-.mobile-arrange-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.mobile-arrange-grid button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 4px;
-  border-radius: 10px;
-  background: var(--bg-hover);
-  border: none;
-  color: var(--text-h);
-  font-size: 11px;
-}
-
-.mobile-arrange-grid button:disabled {
-  color: var(--text);
-  opacity: 0.4;
-}

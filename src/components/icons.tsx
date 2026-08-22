@@ -23,7 +23,6 @@ import {
   Layers,
   Minus,
   MousePointer2,
-  Music,
   Palette,
   Pause,
   Pen,
@@ -31,12 +30,9 @@ import {
   Plus,
   RotateCcw,
   RotateCw,
-  Scissors,
   Search,
   SendToBack,
   Shapes,
-  SlidersHorizontal,
-  Sparkles,
   Square,
   Trash2,
   Type,
@@ -98,7 +94,3 @@ export const TextAlignRightIcon = icon(AlignRight);
 export const ImageIcon = icon(LucideImageIcon);
 export const CropIcon = icon(Crop);
 export const ExpandIcon = icon(Expand);
-export const ScissorsIcon = icon(Scissors);
-export const MusicIcon = icon(Music);
-export const SparklesIcon = icon(Sparkles);
-export const FilterIcon = icon(SlidersHorizontal);

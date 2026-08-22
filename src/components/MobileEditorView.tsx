@@ -1,52 +1,33 @@
 import { useRef, useState } from 'react';
-import {
-  alignPatches,
-  bringToFrontPatches,
-  rotatePatches,
-  sendToBackPatches,
-  type LayerPatch,
-} from '../domain/arrange';
-import { createCaptionLayer, createImageLayerForScene, createTextLayer } from '../domain/layerFactory';
+import { createCaptionLayer, createImageLayerForScene, createShapeLayer, createTextLayer } from '../domain/layerFactory';
 import { getSceneStartMs } from '../domain/timeline';
-import type { ImageLayer, VideoLayer } from '../domain/types';
+import type { ImageLayer } from '../domain/types';
 import { exportProjectToMp4, type ExportQuality } from '../export/exportPipeline';
 import { useProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { addMediaFile } from '../storage/mediaRepository';
 import { useProjectStore } from '../state/projectStore';
 import { BottomSheet } from './BottomSheet';
+import { ContextToolbar } from './ContextToolbar';
 import { ImageCropModal } from './ImageCropModal';
 import {
-  AlignBottomIcon,
   AlignCenterHIcon,
-  AlignLeftIcon,
-  AlignMiddleIcon,
-  AlignRightIcon,
-  AlignTopIcon,
-  BringToFrontIcon,
   CaptionIcon,
   CloseIcon,
   ExpandIcon,
-  FilterIcon,
   ImageIcon,
-  MusicIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
+  RecordIcon,
   RedoIcon,
-  RotateLeftIcon,
-  RotateRightIcon,
-  ScissorsIcon,
-  SendToBackIcon,
-  SparklesIcon,
+  ShapeIcon,
   TextIcon,
-  TrashIcon,
   UndoIcon,
+  UploadIcon,
 } from './icons';
-import { AnimationControl, PhotoFilterControl } from './LayerPropertyControls';
 import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { PreviewPanel } from './PreviewPanel';
-
-type SheetId = 'edit' | 'effect' | 'filter' | null;
+import { RecordingPanel } from './RecordingPanel';
 
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -62,7 +43,6 @@ export function MobileEditorView() {
   const addLayerToScene = useProjectStore((s) => s.addLayerToScene);
   const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
   const updateLayer = useProjectStore((s) => s.updateLayer);
-  const removeLayer = useProjectStore((s) => s.removeLayer);
   const addScene = useProjectStore((s) => s.addScene);
   const canUndo = useProjectStore((s) => s.past.length > 0);
   const canRedo = useProjectStore((s) => s.future.length > 0);
@@ -77,14 +57,14 @@ export function MobileEditorView() {
   const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
-  const [activeSheet, setActiveSheet] = useState<SheetId>(null);
+  const [isArrangeOpen, setArrangeOpen] = useState(false);
   const [isMediaOpen, setMediaOpen] = useState(false);
+  const [isRecordingOpen, setRecordingOpen] = useState(false);
   const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
   const selectedLayers = currentScene.layers.filter((l) => selectedLayerIds.includes(l.id));
-  const selectedLayer = selectedLayers[0];
   const croppingLayer = currentScene.layers.find(
     (l): l is ImageLayer => l.id === croppingImageLayerId && l.type === 'image',
   );
@@ -120,10 +100,6 @@ export function MobileEditorView() {
         console.error(err);
       }
     }
-  }
-
-  function applyArrange(results: LayerPatch[]) {
-    results.forEach(({ id, patch }) => updateLayer(currentScene.id, id, patch));
   }
 
   function handleAddScene() {
@@ -214,45 +190,36 @@ export function MobileEditorView() {
       </div>
 
       <nav className="mobile-editor__tabs">
-        <button
-          className={`mobile-tab${activeSheet === 'edit' ? ' is-active' : ''}`}
-          onClick={() => setActiveSheet('edit')}
-        >
-          <ScissorsIcon size={20} />
-          編集
-        </button>
         <button className={`mobile-tab${isMediaOpen ? ' is-active' : ''}`} onClick={() => setMediaOpen(true)}>
-          <MusicIcon size={20} />
-          オーディオ
+          <UploadIcon size={20} />
+          アップロード
+        </button>
+        <button className="mobile-tab" onClick={() => imageInputRef.current?.click()}>
+          <ImageIcon size={20} />
+          画像
+        </button>
+        <button className={`mobile-tab${isRecordingOpen ? ' is-active' : ''}`} onClick={() => setRecordingOpen(true)}>
+          <RecordIcon size={20} />
+          録画
+        </button>
+        <button className="mobile-tab" onClick={() => addLayerToScene(currentScene.id, createShapeLayer(currentScene))}>
+          <ShapeIcon size={20} />
+          図形
         </button>
         <button className="mobile-tab" onClick={() => addLayerToScene(currentScene.id, createTextLayer(currentScene))}>
           <TextIcon size={20} />
           テキスト
         </button>
         <button
-          className={`mobile-tab${activeSheet === 'effect' ? ' is-active' : ''}`}
-          onClick={() => setActiveSheet('effect')}
-        >
-          <SparklesIcon size={20} />
-          エフェクト
-        </button>
-        <button className="mobile-tab" onClick={() => imageInputRef.current?.click()}>
-          <ImageIcon size={20} />
-          オーバーレイ
-        </button>
-        <button
           className="mobile-tab"
           onClick={() => addLayerToScene(currentScene.id, createCaptionLayer(project, currentScene))}
         >
           <CaptionIcon size={20} />
-          キャプション
+          字幕
         </button>
-        <button
-          className={`mobile-tab${activeSheet === 'filter' ? ' is-active' : ''}`}
-          onClick={() => setActiveSheet('filter')}
-        >
-          <FilterIcon size={20} />
-          フィルタ
+        <button className={`mobile-tab${isArrangeOpen ? ' is-active' : ''}`} onClick={() => setArrangeOpen(true)}>
+          <AlignCenterHIcon size={20} />
+          配置
         </button>
       </nav>
 
@@ -268,91 +235,19 @@ export function MobileEditorView() {
         }}
       />
 
-      {activeSheet === 'edit' && (
-        <BottomSheet title="編集" onClose={() => setActiveSheet(null)}>
-          {!selectedLayer ? (
+      {isMediaOpen && <MediaLibraryPanel project={project} scene={currentScene} onClose={() => setMediaOpen(false)} />}
+      {isRecordingOpen && <RecordingPanel project={project} onClose={() => setRecordingOpen(false)} />}
+
+      {isArrangeOpen && (
+        <BottomSheet title="配置" onClose={() => setArrangeOpen(false)}>
+          {selectedLayers.length === 0 ? (
             <p className="mobile-sheet__hint">キャンバスで要素を選択してください</p>
           ) : (
-            <div className="mobile-arrange-grid">
-              <button onClick={() => applyArrange(bringToFrontPatches(currentScene.layers, selectedLayers))}>
-                <BringToFrontIcon size={20} />
-                最前面へ
-              </button>
-              <button onClick={() => applyArrange(sendToBackPatches(currentScene.layers, selectedLayers))}>
-                <SendToBackIcon size={20} />
-                最背面へ
-              </button>
-              <button onClick={() => applyArrange(rotatePatches(selectedLayers, -90))}>
-                <RotateLeftIcon size={20} />
-                反時計回り
-              </button>
-              <button onClick={() => applyArrange(rotatePatches(selectedLayers, 90))}>
-                <RotateRightIcon size={20} />
-                時計回り
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'left'))}>
-                <AlignLeftIcon size={20} />
-                左揃え
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'centerH'))}>
-                <AlignCenterHIcon size={20} />
-                左右中央
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'right'))}>
-                <AlignRightIcon size={20} />
-                右揃え
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'top'))}>
-                <AlignTopIcon size={20} />
-                上揃え
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'centerV'))}>
-                <AlignMiddleIcon size={20} />
-                上下中央
-              </button>
-              <button onClick={() => applyArrange(alignPatches(project, selectedLayers, 'bottom'))}>
-                <AlignBottomIcon size={20} />
-                下揃え
-              </button>
-              <button
-                onClick={() => {
-                  selectedLayers.forEach((l) => removeLayer(currentScene.id, l.id));
-                  setActiveSheet(null);
-                }}
-              >
-                <TrashIcon size={20} />
-                削除
-              </button>
-            </div>
-          )}
-        </BottomSheet>
-      )}
-
-      {isMediaOpen && (
-        <MediaLibraryPanel project={project} scene={currentScene} onClose={() => setMediaOpen(false)} />
-      )}
-
-      {activeSheet === 'effect' && (
-        <BottomSheet title="エフェクト" onClose={() => setActiveSheet(null)}>
-          {!selectedLayer ? (
-            <p className="mobile-sheet__hint">キャンバスで要素を選択してください</p>
-          ) : (
-            <AnimationControl
-              animation={selectedLayer.animation}
-              onChange={(a) => updateLayer(currentScene.id, selectedLayer.id, { animation: a })}
-            />
-          )}
-        </BottomSheet>
-      )}
-
-      {activeSheet === 'filter' && (
-        <BottomSheet title="フィルタ" onClose={() => setActiveSheet(null)}>
-          {!selectedLayer || (selectedLayer.type !== 'image' && selectedLayer.type !== 'video') ? (
-            <p className="mobile-sheet__hint">画像または動画を選択してください</p>
-          ) : (
-            <PhotoFilterControl
-              filter={(selectedLayer as ImageLayer | VideoLayer).filter}
-              onChange={(f) => updateLayer(currentScene.id, selectedLayer.id, { filter: f })}
+            <ContextToolbar
+              project={project}
+              scene={currentScene}
+              layers={selectedLayers}
+              onOpenCrop={(layerId) => setCroppingImageLayerId(layerId)}
             />
           )}
         </BottomSheet>
