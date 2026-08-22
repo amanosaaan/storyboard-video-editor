@@ -240,6 +240,15 @@ export function useProjectPlaybackEngine(
         }
 
         if (position) {
+          // シーン分割で作られた前後のシーンは同じ素材(mediaId)を共有していることがある。
+          // 「現在のシーンでなければ一時停止」という単純なルールだと、同じ<audio>要素を
+          // 参照する「現在は使っていない方のシーン」を処理したタイミングで一時停止してしまい、
+          // 直後に現在のシーン側の処理で再生を再開する…を毎フレーム繰り返して
+          // 再生が全く進まなくなる（フリーズしたように見える）。
+          // そのため、現在のシーンでも使われている素材は他シーン側の処理で止めないようにする。
+          const currentSceneAudioMediaIds = new Set(
+            position.scene.layers.filter((l) => l.type === 'audio').map((l) => l.mediaId),
+          );
           for (const scene of project.scenes) {
             const isCurrentScene = scene.id === position.scene.id;
             for (const layer of scene.layers) {
@@ -250,7 +259,7 @@ export function useProjectPlaybackEngine(
                 const targetSec = (layer.trimStart + position.localTimeMs) / 1000;
                 el.volume = layer.volume;
                 syncMediaElement(el, targetSec, isPlayingRef.current);
-              } else if (!el.paused) {
+              } else if (!currentSceneAudioMediaIds.has(layer.mediaId) && !el.paused) {
                 el.pause();
               }
             }
@@ -261,6 +270,11 @@ export function useProjectPlaybackEngine(
         if (canvas && position) {
           const ctx = canvas.getContext('2d');
           if (ctx) {
+            // 音声と同じ理由（シーン分割による素材の共有）で、現在のシーンでも
+            // 使われているvideoは他シーン側の処理で一時停止しないようにする。
+            const currentSceneVideoMediaIds = new Set(
+              position.scene.layers.filter((l) => l.type === 'video').map((l) => l.mediaId),
+            );
             for (const scene of project.scenes) {
               const isCurrentScene = scene.id === position.scene.id;
               for (const layer of scene.layers) {
@@ -272,7 +286,7 @@ export function useProjectPlaybackEngine(
                   el.muted = layer.muted;
                   el.volume = layer.muted ? 0 : layer.volume;
                   syncMediaElement(el, targetSec, isPlayingRef.current);
-                } else if (!el.paused) {
+                } else if (!currentSceneVideoMediaIds.has(layer.mediaId) && !el.paused) {
                   el.pause();
                 }
               }
@@ -339,17 +353,24 @@ export function useProjectPlaybackEngine(
     // ハンドラの同期呼び出しの中で行わないとブロックされることがある（特にiOS Safari）。
     // rAFループ側で非同期にplay()を呼んでいるだけだと、再生ボタンを押しても実際には
     // ブロックされて再生されない（音も出ない）ことがあるため、ボタン押下と同じ
-    // 呼び出しスタック内で現在シーンの動画・音声のplay()を先に呼んでおく。
+    // 呼び出しスタック内で現在シーンの動画・音声を、正しい再生位置にシークした上で
+    // 先に再生開始しておく（rAFループと同じsyncMediaElementを使うことで、
+    // 「まず0秒から再生されてから数フレーム後に正しい位置へ飛ぶ」ような
+    // 一瞬のノイズ/コマ飛びが起きないようにする）。
     if (project) {
       const position = resolvePosition(project, timeRef.current);
       if (position) {
         for (const layer of position.scene.layers) {
           if (layer.type === 'video') {
             const el = assetsRef.current.get(layer.mediaId);
-            if (el instanceof HTMLVideoElement && el.paused) void el.play().catch(() => {});
+            if (el instanceof HTMLVideoElement) {
+              syncMediaElement(el, (layer.trimStart + position.localTimeMs) / 1000, true);
+            }
           } else if (layer.type === 'audio') {
             const el = audioAssetsRef.current.get(layer.mediaId);
-            if (el && el.paused) void el.play().catch(() => {});
+            if (el) {
+              syncMediaElement(el, (layer.trimStart + position.localTimeMs) / 1000, true);
+            }
           }
         }
       }
