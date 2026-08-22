@@ -21,6 +21,7 @@ import {
   CloseIcon,
   ExpandIcon,
   ImageIcon,
+  MultiSelectIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
@@ -67,6 +68,9 @@ export function MobileEditorView() {
   const [isMediaOpen, setMediaOpen] = useState(false);
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
 
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
   // プロパティ編集シートを開き、選択解除したら自動で閉じる。
@@ -78,9 +82,25 @@ export function MobileEditorView() {
     const key = selectedLayerIds.join(',');
     if (key !== prevSelectionKeyRef.current) {
       setArrangeOpen(key !== '');
+      if (key === '') setMultiSelectMode(false);
     }
     prevSelectionKeyRef.current = key;
   }, [selectedLayerIds]);
+
+  // 配置シートが動画プレビューにかからないよう、プレビュー枠の下端から
+  // 画面下端までの残り高さを最大高さとして使う。シートを開く前から値を
+  // 用意しておくことで、開いた瞬間にCSSの既定値からガクッと変わるのを防ぐ。
+  useEffect(() => {
+    function updateSheetMaxHeight() {
+      const el = previewRef.current;
+      if (!el) return;
+      const bottom = el.getBoundingClientRect().bottom;
+      setSheetMaxHeight(Math.max(160, window.innerHeight - bottom - 8));
+    }
+    updateSheetMaxHeight();
+    window.addEventListener('resize', updateSheetMaxHeight);
+    return () => window.removeEventListener('resize', updateSheetMaxHeight);
+  }, []);
 
   if (!project) return null;
   const currentScene = engine.position?.scene ?? project.scenes[0];
@@ -151,12 +171,13 @@ export function MobileEditorView() {
         </div>
       </header>
 
-      <div className="mobile-editor__preview">
+      <div className="mobile-editor__preview" ref={previewRef}>
         <PreviewPanel
           project={project}
           canvasRef={canvasRef}
           engine={engine}
           onOpenCrop={(layerId) => setCroppingImageLayerId(layerId)}
+          multiSelectMode={multiSelectMode}
         />
       </div>
 
@@ -259,7 +280,23 @@ export function MobileEditorView() {
       {isRecordingOpen && <RecordingPanel project={project} onClose={() => setRecordingOpen(false)} />}
 
       {isArrangeOpen && (
-        <BottomSheet title="配置" onClose={() => setArrangeOpen(false)}>
+        <BottomSheet
+          title="配置"
+          onClose={() => setArrangeOpen(false)}
+          maxHeightPx={sheetMaxHeight}
+          headerExtra={
+            selectedLayers.length > 0 ? (
+              <button
+                className={`mobile-icon-btn${multiSelectMode ? ' is-active' : ''}`}
+                title="複数選択"
+                aria-pressed={multiSelectMode}
+                onClick={() => setMultiSelectMode((v) => !v)}
+              >
+                <MultiSelectIcon size={18} />
+              </button>
+            ) : undefined
+          }
+        >
           {selectedLayers.length === 0 ? (
             <p className="mobile-sheet__hint">キャンバスで要素を選択してください</p>
           ) : (

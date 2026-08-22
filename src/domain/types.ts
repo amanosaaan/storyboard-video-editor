@@ -63,6 +63,9 @@ export interface TextLayer extends BaseLayer {
   fontWeight: string;
   italic?: boolean;
   underline?: boolean;
+  /** シアー（傾き）角度。度単位、未指定は0 */
+  skewX?: number;
+  skewY?: number;
   align: 'left' | 'center' | 'right';
   /** 字幕用の半透明背景ボックス（未指定なら背景なし） */
   backgroundColor?: string;

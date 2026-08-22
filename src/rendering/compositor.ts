@@ -116,6 +116,10 @@ function drawLayer(ctx: Ctx2D, layer: Layer, assets: ResolvedAssetMap, sceneTime
   const cy = layer.y + layer.height / 2;
   ctx.translate(cx, cy);
   ctx.rotate((layer.rotation * Math.PI) / 180);
+  if (layer.type === 'text' && (layer.skewX || layer.skewY)) {
+    // 中心を軸に、水平・垂直それぞれの傾き角度からシアー変換を適用する。
+    ctx.transform(1, Math.tan(((layer.skewY ?? 0) * Math.PI) / 180), Math.tan(((layer.skewX ?? 0) * Math.PI) / 180), 1, 0, 0);
+  }
   applyAnimationTransform(ctx, layer.animation, sceneTimeMs, layer.width, layer.height);
   ctx.translate(-cx, -cy);
 

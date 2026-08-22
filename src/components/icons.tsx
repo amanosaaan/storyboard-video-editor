@@ -26,6 +26,7 @@ import {
   Layers,
   Minus,
   MousePointer2,
+  MousePointerSquareDashed,
   Palette,
   Pause,
   Pen,
@@ -109,3 +110,4 @@ export const ShapeCircleIcon = icon(Circle);
 export const ShapeLineIcon = icon(Slash);
 export const MuteOnIcon = icon(VolumeX);
 export const MuteOffIcon = icon(Volume2);
+export const MultiSelectIcon = icon(MousePointerSquareDashed);

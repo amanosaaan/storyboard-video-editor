@@ -14,6 +14,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   engine: ProjectPlaybackEngine;
   onOpenCrop: (layerId: string) => void;
+  /** スマホ等、shiftキーが無い環境向けの複数選択モード。trueの間は追加選択になる。 */
+  multiSelectMode?: boolean;
 }
 
 function InlineTextEditor({
@@ -61,7 +63,7 @@ function InlineTextEditor({
   );
 }
 
-export function PreviewPanel({ project, canvasRef, engine, onOpenCrop }: Props) {
+export function PreviewPanel({ project, canvasRef, engine, onOpenCrop, multiSelectMode }: Props) {
   const updateLayer = useProjectStore((s) => s.updateLayer);
   const selectLayer = useProjectStore((s) => s.selectLayer);
   const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
@@ -140,8 +142,9 @@ export function PreviewPanel({ project, canvasRef, engine, onOpenCrop }: Props) 
                   scale={scale}
                   isSelected={selectedLayerIds.includes(layer.id)}
                   hidden={layer.id === editingTextLayerId}
-                  onSelect={(additive) => selectLayer(layer.id, { additive })}
+                  onSelect={(additive) => selectLayer(layer.id, { additive: additive || !!multiSelectMode })}
                   onChange={(patch) => scene && updateLayer(scene.id, layer.id, patch)}
+                  onSkewChange={(patch) => scene && updateLayer(scene.id, layer.id, patch)}
                   onDoubleClick={() => {
                     if (layer.type === 'text') startEditing(layer.id);
                     else if (layer.type === 'image') onOpenCrop(layer.id);

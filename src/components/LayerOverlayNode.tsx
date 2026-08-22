@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Rect, Transformer } from 'react-konva';
+import { Circle, Group, Rect, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import type { Layer } from '../domain/types';
 
@@ -9,13 +9,20 @@ interface Props {
   isSelected: boolean;
   onSelect: (additive: boolean) => void;
   onChange: (patch: { x: number; y: number; width: number; height: number; rotation: number }) => void;
+  onSkewChange?: (patch: { skewX: number; skewY: number }) => void;
   onDoubleClick?: () => void;
   hidden?: boolean;
 }
 
 const MIN_SIZE = 10;
+const SKEW_HANDLE_OFFSET = 20;
+const MAX_SKEW_DEG = 70;
 
-export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange, onDoubleClick, hidden }: Props) {
+function clampSkew(deg: number): number {
+  return Math.max(-MAX_SKEW_DEG, Math.min(MAX_SKEW_DEG, deg));
+}
+
+export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange, onSkewChange, onDoubleClick, hidden }: Props) {
   const shapeRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -111,6 +118,68 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange,
           }
         />
       )}
+      {isSelected && layer.type === 'text' && onSkewChange && (() => {
+        const halfW = scaledWidth / 2;
+        const halfH = scaledHeight / 2;
+        const skewXRad = ((layer.skewX ?? 0) * Math.PI) / 180;
+        const skewYRad = ((layer.skewY ?? 0) * Math.PI) / 180;
+        const topHandleX = halfW - Math.tan(skewXRad) * (halfH + SKEW_HANDLE_OFFSET);
+        const sideHandleY = halfH + Math.tan(skewYRad) * (halfW + SKEW_HANDLE_OFFSET);
+        const currentSkewX = layer.skewX ?? 0;
+        const currentSkewY = layer.skewY ?? 0;
+        return (
+          <Group
+            x={(layer.x + layer.width / 2) * scale}
+            y={(layer.y + layer.height / 2) * scale}
+            offsetX={halfW}
+            offsetY={halfH}
+            rotation={layer.rotation}
+          >
+            {/* 上辺のハンドル：横方向にドラッグして水平シアー(skewX)を調整 */}
+            <Circle
+              x={topHandleX}
+              y={-SKEW_HANDLE_OFFSET}
+              radius={6}
+              fill="#1a73e8"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+              draggable
+              onDragMove={(e) => {
+                const node = e.target;
+                node.y(-SKEW_HANDLE_OFFSET);
+              }}
+              onDragEnd={(e) => {
+                const node = e.target;
+                const deg = clampSkew(
+                  (Math.atan2(halfW - node.x(), halfH + SKEW_HANDLE_OFFSET) * 180) / Math.PI,
+                );
+                onSkewChange({ skewX: deg, skewY: currentSkewY });
+              }}
+            />
+            {/* 右辺のハンドル：縦方向にドラッグして垂直シアー(skewY)を調整 */}
+            <Circle
+              x={scaledWidth + SKEW_HANDLE_OFFSET}
+              y={sideHandleY}
+              radius={6}
+              fill="#1a73e8"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+              draggable
+              onDragMove={(e) => {
+                const node = e.target;
+                node.x(scaledWidth + SKEW_HANDLE_OFFSET);
+              }}
+              onDragEnd={(e) => {
+                const node = e.target;
+                const deg = clampSkew(
+                  (Math.atan2(node.y() - halfH, halfW + SKEW_HANDLE_OFFSET) * 180) / Math.PI,
+                );
+                onSkewChange({ skewX: currentSkewX, skewY: deg });
+              }}
+            />
+          </Group>
+        );
+      })()}
     </>
   );
 }

@@ -1487,6 +1487,11 @@ button.editor__menubar-item[aria-expanded='true'] {
   opacity: 0.4;
 }
 
+.mobile-icon-btn.is-active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
 .mobile-editor__preview {
   flex: 1;
   min-height: 0;
@@ -1638,9 +1643,45 @@ button.editor__menubar-item[aria-expanded='true'] {
   font-size: 15px;
 }
 
+.mobile-sheet__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
 .mobile-sheet__body {
   padding: 16px;
   overflow-y: auto;
+}
+
+/* スマホの配置シート内ツールバー: 横スクロールではなく折り返して縦に収める。
+   削除ボタンはスクロール位置に関わらず常に左上に固定表示し、押しやすくする。 */
+.mobile-sheet .context-toolbar {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  align-items: center;
+  row-gap: 14px;
+  padding: 0;
+  border-bottom: none;
+  min-height: 0;
+}
+
+.mobile-sheet .context-toolbar__group {
+  border-right: none;
+  padding-right: 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.mobile-sheet .context-toolbar__delete {
+  order: -1;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  margin-left: 0;
+  z-index: 2;
+  background: var(--bg-panel);
 }
 
 .mobile-sheet__hint {
