@@ -1554,12 +1554,26 @@ button.editor__menubar-item[aria-expanded='true'] {
 }
 
 .mobile-editor__scenes-scroll {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
   flex: 1;
   min-width: 0;
+}
+
+.mobile-editor__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .mobile-editor__scenes-actions {

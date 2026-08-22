@@ -38,6 +38,10 @@ import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { RecordingPanel } from './RecordingPanel';
 
+// .mobile-scene-chip の width と .mobile-editor__scenes-scroll の gap（index.css）と一致させること。
+const SCENE_CHIP_WIDTH = 56;
+const SCENE_CHIP_GAP = 8;
+
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -239,6 +243,25 @@ export function MobileEditorView() {
                 {i + 1}
               </button>
             ))}
+            {engine.position && (
+              <div
+                className="mobile-editor__playhead"
+                style={{
+                  left:
+                    engine.position.sceneIndex * (SCENE_CHIP_WIDTH + SCENE_CHIP_GAP) +
+                    Math.min(
+                      1,
+                      Math.max(
+                        0,
+                        engine.position.scene.duration > 0
+                          ? engine.position.localTimeMs / engine.position.scene.duration
+                          : 0,
+                      ),
+                    ) *
+                      SCENE_CHIP_WIDTH,
+                }}
+              />
+            )}
           </div>
           <div className="mobile-editor__scenes-actions">
             <button
