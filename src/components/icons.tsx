@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   Circle,
+  Copy,
   Crop,
   Expand,
   Focus,
@@ -111,3 +112,4 @@ export const ShapeLineIcon = icon(Slash);
 export const MuteOnIcon = icon(VolumeX);
 export const MuteOffIcon = icon(Volume2);
 export const MultiSelectIcon = icon(MousePointerSquareDashed);
+export const CopyIcon = icon(Copy);

@@ -1551,7 +1551,24 @@ button.editor__menubar-item[aria-expanded='true'] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.mobile-editor__scenes-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-editor__scenes-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
 }
 
 .mobile-scene-chip {

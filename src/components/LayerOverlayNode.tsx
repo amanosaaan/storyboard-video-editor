@@ -17,9 +17,26 @@ interface Props {
 const MIN_SIZE = 10;
 const SKEW_HANDLE_OFFSET = 20;
 const MAX_SKEW_DEG = 70;
+const SNAP_ANGLES = [-60, -45, -30, -15, 0, 15, 30, 45, 60];
+const SNAP_TOLERANCE_DEG = 4;
+const ROTATION_SNAPS = Array.from({ length: 24 }, (_, i) => i * 15);
 
 function clampSkew(deg: number): number {
   return Math.max(-MAX_SKEW_DEG, Math.min(MAX_SKEW_DEG, deg));
+}
+
+/** キリのいい角度に近ければピタッと吸着させる（ちょっとカクッと止まる感触を出す） */
+function snapAngle(deg: number): number {
+  let closest = deg;
+  let minDiff = SNAP_TOLERANCE_DEG;
+  for (const snap of SNAP_ANGLES) {
+    const diff = Math.abs(deg - snap);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = snap;
+    }
+  }
+  return closest;
 }
 
 export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange, onSkewChange, onDoubleClick, hidden }: Props) {
@@ -101,6 +118,8 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange,
           anchorStroke="#1a73e8"
           anchorStrokeWidth={2}
           rotateAnchorOffset={28}
+          rotationSnaps={ROTATION_SNAPS}
+          rotationSnapTolerance={5}
           anchorStyleFunc={(anchorNode) => {
             if (anchorNode.hasName('rotater')) {
               anchorNode.fill('#1a73e8');
@@ -146,13 +165,15 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange,
               draggable
               onDragMove={(e) => {
                 const node = e.target;
+                const rawDeg = (Math.atan2(halfW - node.x(), halfH + SKEW_HANDLE_OFFSET) * 180) / Math.PI;
+                const snappedDeg = clampSkew(snapAngle(rawDeg));
+                node.x(halfW - Math.tan((snappedDeg * Math.PI) / 180) * (halfH + SKEW_HANDLE_OFFSET));
                 node.y(-SKEW_HANDLE_OFFSET);
               }}
               onDragEnd={(e) => {
                 const node = e.target;
-                const deg = clampSkew(
-                  (Math.atan2(halfW - node.x(), halfH + SKEW_HANDLE_OFFSET) * 180) / Math.PI,
-                );
+                const rawDeg = (Math.atan2(halfW - node.x(), halfH + SKEW_HANDLE_OFFSET) * 180) / Math.PI;
+                const deg = clampSkew(snapAngle(rawDeg));
                 onSkewChange({ skewX: deg, skewY: currentSkewY });
               }}
             />
@@ -167,13 +188,15 @@ export function LayerOverlayNode({ layer, scale, isSelected, onSelect, onChange,
               draggable
               onDragMove={(e) => {
                 const node = e.target;
+                const rawDeg = (Math.atan2(node.y() - halfH, halfW + SKEW_HANDLE_OFFSET) * 180) / Math.PI;
+                const snappedDeg = clampSkew(snapAngle(rawDeg));
                 node.x(scaledWidth + SKEW_HANDLE_OFFSET);
+                node.y(halfH + Math.tan((snappedDeg * Math.PI) / 180) * (halfW + SKEW_HANDLE_OFFSET));
               }}
               onDragEnd={(e) => {
                 const node = e.target;
-                const deg = clampSkew(
-                  (Math.atan2(node.y() - halfH, halfW + SKEW_HANDLE_OFFSET) * 180) / Math.PI,
-                );
+                const rawDeg = (Math.atan2(node.y() - halfH, halfW + SKEW_HANDLE_OFFSET) * 180) / Math.PI;
+                const deg = clampSkew(snapAngle(rawDeg));
                 onSkewChange({ skewX: currentSkewX, skewY: deg });
               }}
             />

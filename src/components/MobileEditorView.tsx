@@ -19,6 +19,7 @@ import {
   AlignCenterHIcon,
   CaptionIcon,
   CloseIcon,
+  CopyIcon,
   ExpandIcon,
   ImageIcon,
   MultiSelectIcon,
@@ -29,6 +30,7 @@ import {
   RedoIcon,
   ShapeIcon,
   TextIcon,
+  TrashIcon,
   UndoIcon,
   UploadIcon,
 } from './icons';
@@ -51,6 +53,8 @@ export function MobileEditorView() {
   const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
   const updateLayer = useProjectStore((s) => s.updateLayer);
   const addScene = useProjectStore((s) => s.addScene);
+  const duplicateScene = useProjectStore((s) => s.duplicateScene);
+  const removeScene = useProjectStore((s) => s.removeScene);
   const canUndo = useProjectStore((s) => s.past.length > 0);
   const canRedo = useProjectStore((s) => s.future.length > 0);
   const undo = useProjectStore((s) => s.undo);
@@ -147,6 +151,16 @@ export function MobileEditorView() {
     if (newId && project) engine.seek(getSceneStartMs(project, newId));
   }
 
+  function handleDuplicateScene() {
+    if (!currentSceneId) return;
+    const newId = duplicateScene(currentSceneId);
+    if (newId && project) engine.seek(getSceneStartMs(project, newId));
+  }
+
+  function handleRemoveScene() {
+    if (currentSceneId) removeScene(currentSceneId);
+  }
+
   return (
     <div className="mobile-editor">
       <header className="mobile-editor__top">
@@ -215,18 +229,40 @@ export function MobileEditorView() {
           onChange={(e) => engine.seek(Number(e.target.value))}
         />
         <div className="mobile-editor__scenes">
-          {project.scenes.map((scene, i) => (
+          <div className="mobile-editor__scenes-scroll">
+            {project.scenes.map((scene, i) => (
+              <button
+                key={scene.id}
+                className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}`}
+                onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+          <div className="mobile-editor__scenes-actions">
             <button
-              key={scene.id}
-              className={`mobile-scene-chip${scene.id === currentSceneId ? ' is-active' : ''}`}
-              onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
+              className="mobile-icon-btn"
+              onClick={handleDuplicateScene}
+              disabled={!currentSceneId}
+              title="このシーンを複製"
+              aria-label="このシーンを複製"
             >
-              {i + 1}
+              <CopyIcon size={18} />
             </button>
-          ))}
-          <button className="mobile-scene-add" onClick={handleAddScene} aria-label="シーン追加">
-            <PlusIcon size={18} />
-          </button>
+            <button
+              className="mobile-icon-btn"
+              onClick={handleRemoveScene}
+              disabled={!currentSceneId}
+              title="このシーンを削除"
+              aria-label="このシーンを削除"
+            >
+              <TrashIcon size={18} />
+            </button>
+            <button className="mobile-scene-add" onClick={handleAddScene} aria-label="シーン追加">
+              <PlusIcon size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
