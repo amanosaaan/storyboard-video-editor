@@ -11,6 +11,7 @@ import {
   AlignVerticalJustifyStart,
   ArrowLeft,
   ArrowLeftRight,
+  AudioLines,
   Bold,
   BringToFront,
   Captions,
@@ -42,7 +43,6 @@ import {
   Shapes,
   Slash,
   Square,
-  Timer,
   Trash2,
   Type,
   Underline,
@@ -118,4 +118,5 @@ export const MultiSelectIcon = icon(MousePointerSquareDashed);
 export const CopyIcon = icon(Copy);
 export const ScissorsIcon = icon(Scissors);
 export const SwapIcon = icon(ArrowLeftRight);
-export const TimerIcon = icon(Timer);
+export const VideoIcon = icon(Video);
+export const AudioIcon = icon(AudioLines);

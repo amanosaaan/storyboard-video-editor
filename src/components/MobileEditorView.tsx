@@ -18,6 +18,8 @@ import { ImageCropModal } from './ImageCropModal';
 import {
   AlignCenterHIcon,
   CaptionIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CloseIcon,
   CopyIcon,
   ExpandIcon,
@@ -35,6 +37,7 @@ import {
   UndoIcon,
   UploadIcon,
 } from './icons';
+import { LayerTimelinePanel } from './LayerTimelinePanel';
 import { MediaLibraryPanel } from './MediaLibraryPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { RecordingPanel } from './RecordingPanel';
@@ -76,6 +79,7 @@ export function MobileEditorView() {
   const [isRecordingOpen, setRecordingOpen] = useState(false);
   const [croppingImageLayerId, setCroppingImageLayerId] = useState<string | null>(null);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [isTimingOpen, setTimingOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const [sheetMaxHeight, setSheetMaxHeight] = useState<number>();
   // CapCutと同様、キャンバスで要素を選択（または別の要素に選択し直）したら自動で
@@ -233,6 +237,10 @@ export function MobileEditorView() {
           <div className="mobile-editor__time">
             {formatTime(engine.currentTimeMs)} / {formatTime(engine.totalDurationMs)}
           </div>
+          <button className="btn-pill layer-track-toggle" onClick={() => setTimingOpen((v) => !v)}>
+            タイミング
+            {isTimingOpen ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
+          </button>
           <button
             className="mobile-icon-btn"
             onClick={handleSplitScene}
@@ -245,6 +253,7 @@ export function MobileEditorView() {
         </div>
         <div className="mobile-editor__scenes">
           <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter />
+          {isTimingOpen && <LayerTimelinePanel scene={currentScene} engine={engine} />}
           <div className="mobile-editor__scenes-actions">
             <button
               className="mobile-icon-btn"

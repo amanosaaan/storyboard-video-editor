@@ -4,7 +4,8 @@ import type { Project, Scene, TransitionConfig } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
-import { CopyIcon, PauseIcon, PlayIcon, PlusIcon, ScissorsIcon, SwapIcon, TrashIcon } from './icons';
+import { ChevronDownIcon, ChevronUpIcon, CopyIcon, PauseIcon, PlayIcon, PlusIcon, ScissorsIcon, SwapIcon, TrashIcon } from './icons';
+import { LayerTimelinePanel } from './LayerTimelinePanel';
 import { SceneTimelineStrip } from './SceneTimelineStrip';
 
 const TRANSITION_OPTIONS: { type: TransitionConfig['type'] | 'none'; label: string; preview: string }[] = [
@@ -111,6 +112,7 @@ function formatTime(ms: number): string {
 }
 
 export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine }: Props) {
+  const [isTimingOpen, setTimingOpen] = useState(false);
   const addScene = useProjectStore((s) => s.addScene);
   const duplicateScene = useProjectStore((s) => s.duplicateScene);
   const removeScene = useProjectStore((s) => s.removeScene);
@@ -147,6 +149,10 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
   return (
     <div className="storyboard">
       <div className="storyboard__header">
+        <button className="btn-pill layer-track-toggle" onClick={() => setTimingOpen((v) => !v)}>
+          {isTimingOpen ? 'タイミングを非表示' : 'タイミングを表示'}
+          {isTimingOpen ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
+        </button>
         <button className="btn-icon" onClick={engine.isPlaying ? engine.pause : engine.play} aria-label="再生">
           {engine.isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
@@ -172,6 +178,7 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         onChange={(e) => engine.seek(Number(e.target.value))}
       />
       <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
+      {isTimingOpen && currentScene && <LayerTimelinePanel scene={currentScene} engine={engine} />}
       <div className="storyboard__actions">
         <button
           className="mobile-icon-btn"

@@ -554,47 +554,119 @@ button.editor__menubar-item[aria-expanded='true'] {
   color: var(--accent-contrast);
 }
 
-.layer-timing__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 230;
+/* レイヤーごとの表示タイミングを編集するトラックパネル(本家Google Vids準拠、LayerTimelinePanel.tsx) */
+.layer-track-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
-.layer-timing__panel {
-  position: fixed;
-  transform: translate(-50%, -100%) translateY(-10px);
-  z-index: 231;
+.layer-track-panel {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 240px;
-  padding: 12px;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
-.layer-timing__track {
+.layer-track-panel--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text);
+  padding: 16px 8px;
+}
+
+.layer-track-panel__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  width: 92px;
+}
+
+.layer-track-panel__lanes {
   position: relative;
-  height: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.layer-track-panel__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.layer-track-row__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-track-row__label.is-selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.layer-track-row__lane {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+}
+
+.layer-track-row__track {
+  position: relative;
+  flex: 1;
+  height: 14px;
   border-radius: 999px;
   background: var(--bg-app);
+  cursor: pointer;
 }
 
-.layer-timing__range {
+.layer-track-row__bar {
   position: absolute;
   top: 0;
   height: 100%;
   border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+}
+
+.layer-track-row__lane.is-selected .layer-track-row__bar {
   background: var(--accent);
 }
 
-.layer-timing__handle {
+.layer-track-row__handle {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: var(--accent-contrast);
@@ -604,25 +676,30 @@ button.editor__menubar-item[aria-expanded='true'] {
   touch-action: none;
 }
 
-.layer-timing__fields {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 10px;
+.layer-track-row__handle--start {
+  left: 0;
 }
 
-.btn-text {
+.layer-track-row__handle--end {
+  left: 100%;
+}
+
+.layer-track-row__reset {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--accent);
-  font-size: 11px;
-  padding: 0;
-  cursor: pointer;
-  white-space: nowrap;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
 }
 
-.btn-text:hover {
-  text-decoration: underline;
+.layer-track-row__reset:hover {
+  background: var(--bg-hover);
 }
 
 .context-toolbar__select {
@@ -964,6 +1041,10 @@ button.editor__menubar-item[aria-expanded='true'] {
 
 .storyboard__split {
   margin-left: auto;
+}
+
+.storyboard__header .layer-track-toggle {
+  margin-right: auto;
 }
 
 .storyboard__seekbar {
