@@ -633,6 +633,26 @@ button.editor__menubar-item[aria-expanded='true'] {
   color: var(--accent);
 }
 
+.layer-track-row__label--ruler {
+  height: 32px;
+}
+
+.layer-track-row__ruler {
+  flex: 1;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  cursor: pointer;
+}
+
 .layer-track-row__lane {
   display: flex;
   align-items: center;

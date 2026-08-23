@@ -1,9 +1,14 @@
 import { useRef, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
 import { getLayerVisibleRange } from '../domain/layerTiming';
-import type { Layer, Scene } from '../domain/types';
+import { getSceneStartMs } from '../domain/timeline';
+import type { Project, Layer, Scene } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
 import { AudioIcon, CloseIcon, ImageIcon, ShapeCircleIcon, ShapeLineIcon, ShapeRectIcon, TextIcon, VideoIcon } from './icons';
+
+function formatSec(ms: number): string {
+  return `${(ms / 1000).toFixed(1)}s`;
+}
 
 function layerTypeMeta(layer: Layer): { Icon: ComponentType<{ size?: number }>; label: string } {
   switch (layer.type) {
@@ -117,8 +122,41 @@ function LayerTrackLane({
   );
 }
 
+function SceneRuler({
+  scene,
+  project,
+  engine,
+}: {
+  scene: Scene;
+  project: Project;
+  engine: ProjectPlaybackEngine;
+}) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  function seekFromClientX(clientX: number) {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    engine.seek(getSceneStartMs(project, scene.id) + ratio * scene.duration);
+  }
+
+  return (
+    <div className="layer-track-row__lane">
+      <div
+        className="layer-track-row__ruler"
+        ref={trackRef}
+        onPointerDown={(e) => seekFromClientX(e.clientX)}
+      >
+        <span>0:00</span>
+        <span>{formatSec(scene.duration)}</span>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   scene: Scene;
+  project: Project;
   engine: ProjectPlaybackEngine;
 }
 
@@ -128,7 +166,7 @@ interface Props {
  * レイヤー種類ごとに1行、シーンの長さを基準にしたバーで表示区間を示し、
  * バー端をドラッグして開始/終了時刻を変更できる。
  */
-export function LayerTimelinePanel({ scene, engine }: Props) {
+export function LayerTimelinePanel({ scene, project, engine }: Props) {
   const selectedLayerIds = useProjectStore((s) => s.selectedLayerIds);
   const selectLayer = useProjectStore((s) => s.selectLayer);
   const updateLayer = useProjectStore((s) => s.updateLayer);
@@ -144,6 +182,7 @@ export function LayerTimelinePanel({ scene, engine }: Props) {
   return (
     <div className="layer-track-panel">
       <div className="layer-track-panel__labels">
+        <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
         {rows.map((layer) => (
           <LayerTrackLabel
             key={layer.id}
@@ -155,6 +194,7 @@ export function LayerTimelinePanel({ scene, engine }: Props) {
       </div>
       <div className="layer-track-panel__lanes">
         {showPlayhead && <div className="layer-track-panel__playhead" style={{ left: `${playheadPct}%` }} />}
+        <SceneRuler scene={scene} project={project} engine={engine} />
         {rows.map((layer) => (
           <LayerTrackLane
             key={layer.id}
