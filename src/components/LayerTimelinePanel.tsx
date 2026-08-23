@@ -4,7 +4,18 @@ import { getSceneStartMs } from '../domain/timeline';
 import type { Project, Layer, Scene } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
-import { AudioIcon, CloseIcon, ImageIcon, ShapeCircleIcon, ShapeLineIcon, ShapeRectIcon, TextIcon, VideoIcon } from './icons';
+import {
+  AudioIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  ImageIcon,
+  ShapeCircleIcon,
+  ShapeLineIcon,
+  ShapeRectIcon,
+  TextIcon,
+  VideoIcon,
+} from './icons';
 
 function formatSec(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
@@ -123,33 +134,32 @@ function LayerTrackLane({
 }
 
 /**
- * シーン切り替え用の縮小チップ列。現在のシーンだけをこの下のトラック列と
- * 同じ幅まで広げ、他のシーンは番号だけの小さいチップにする。
- * SceneTimelineStrip(全体の一覧・シークバー)とは別の、この詳細パネル専用の
- * 簡易セレクタ。lanes列(flexカラム)の中の1行として置くことで、
- * ルーラーやレイヤー行と幅がぴったり揃う(JS側で幅を計算する必要がない)。
+ * シーン切り替え用のナビゲーション(前へ/シーンN/全体数/次へ)。
+ * ルーラー・レイヤー行と同じ幅の列(label/lanesの2カラム)には含めず、
+ * パネル上部で独立した行として全幅を使う。以前は現在のシーンのチップを
+ * トラック列と同じ幅まで広げる方式だったが、シーン数が多いと他シーンの
+ * 分だけ幅を奪い合ってルーラー/バーとズレて見えるため、この方式に変更した。
  */
-function SceneChipRow({ project, scene, engine }: { project: Project; scene: Scene; engine: ProjectPlaybackEngine }) {
+function SceneNav({ project, scene, engine }: { project: Project; scene: Scene; engine: ProjectPlaybackEngine }) {
+  const index = project.scenes.findIndex((s) => s.id === scene.id);
+  const total = project.scenes.length;
+
+  function goTo(i: number) {
+    const target = project.scenes[i];
+    if (target) engine.seek(getSceneStartMs(project, target.id));
+  }
+
   return (
-    <div className="layer-track-row__lane">
-      <div className="layer-track-panel__chiprow">
-        {project.scenes.map((s, i) =>
-          s.id === scene.id ? (
-            <div key={s.id} className="layer-track-panel__chip layer-track-panel__chip--active">
-              {i + 1}
-            </div>
-          ) : (
-            <button
-              key={s.id}
-              type="button"
-              className="layer-track-panel__chip"
-              onClick={() => engine.seek(getSceneStartMs(project, s.id))}
-            >
-              {i + 1}
-            </button>
-          ),
-        )}
-      </div>
+    <div className="layer-track-panel__scenenav">
+      <button type="button" onClick={() => goTo(index - 1)} disabled={index <= 0} aria-label="前のシーン">
+        <ChevronLeftIcon size={14} />
+      </button>
+      <span>
+        シーン {index + 1} / {total}
+      </span>
+      <button type="button" onClick={() => goTo(index + 1)} disabled={index >= total - 1} aria-label="次のシーン">
+        <ChevronRightIcon size={14} />
+      </button>
     </div>
   );
 }
@@ -209,38 +219,38 @@ export function LayerTimelinePanel({ scene, project, engine }: Props) {
 
   return (
     <div className="layer-track-panel">
-      <div className="layer-track-panel__labels">
-        <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
-        <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
-        {rows.length === 0 && <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />}
-        {rows.map((layer) => (
-          <LayerTrackLabel
-            key={layer.id}
-            layer={layer}
-            isSelected={selectedLayerIds.includes(layer.id)}
-            onSelect={() => selectLayer(layer.id)}
-          />
-        ))}
-      </div>
-      <div className="layer-track-panel__lanes">
-        {showPlayhead && <div className="layer-track-panel__playhead" style={{ left: `${playheadPct}%` }} />}
-        <SceneChipRow project={project} scene={scene} engine={engine} />
-        <SceneRuler scene={scene} project={project} engine={engine} />
-        {rows.length === 0 && (
-          <div className="layer-track-row__lane">
-            <p className="layer-track-panel__hint">このシーンにはまだ要素がありません</p>
-          </div>
-        )}
-        {rows.map((layer) => (
-          <LayerTrackLane
-            key={layer.id}
-            layer={layer}
-            sceneDurationMs={scene.duration}
-            isSelected={selectedLayerIds.includes(layer.id)}
-            onSelect={() => selectLayer(layer.id)}
-            onChange={(patch) => updateLayer(scene.id, layer.id, patch)}
-          />
-        ))}
+      <SceneNav project={project} scene={scene} engine={engine} />
+      <div className="layer-track-panel__grid">
+        <div className="layer-track-panel__labels">
+          <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
+          {rows.map((layer) => (
+            <LayerTrackLabel
+              key={layer.id}
+              layer={layer}
+              isSelected={selectedLayerIds.includes(layer.id)}
+              onSelect={() => selectLayer(layer.id)}
+            />
+          ))}
+        </div>
+        <div className="layer-track-panel__lanes">
+          {showPlayhead && <div className="layer-track-panel__playhead" style={{ left: `${playheadPct}%` }} />}
+          <SceneRuler scene={scene} project={project} engine={engine} />
+          {rows.length === 0 && (
+            <div className="layer-track-row__lane">
+              <p className="layer-track-panel__hint">このシーンにはまだ要素がありません</p>
+            </div>
+          )}
+          {rows.map((layer) => (
+            <LayerTrackLane
+              key={layer.id}
+              layer={layer}
+              sceneDurationMs={scene.duration}
+              isSelected={selectedLayerIds.includes(layer.id)}
+              onSelect={() => selectLayer(layer.id)}
+              onChange={(patch) => updateLayer(scene.id, layer.id, patch)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

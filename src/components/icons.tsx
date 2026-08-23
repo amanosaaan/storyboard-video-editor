@@ -16,6 +16,8 @@ import {
   BringToFront,
   Captions,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Circle,
   Copy,
@@ -99,6 +101,8 @@ export const FolderOpenIcon = icon(FolderOpen);
 export const DistributeIcon = icon(AlignHorizontalDistributeCenter);
 export const ChevronUpIcon = icon(ChevronUp);
 export const ChevronDownIcon = icon(ChevronDown);
+export const ChevronLeftIcon = icon(ChevronLeft);
+export const ChevronRightIcon = icon(ChevronRight);
 export const MinusIcon = icon(Minus);
 export const TextAlignLeftIcon = icon(AlignLeft);
 export const TextAlignCenterIcon = icon(AlignCenter);
