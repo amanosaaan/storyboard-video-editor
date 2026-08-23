@@ -120,11 +120,18 @@ function LayerTrackLane({
           className={`layer-track-row__bar layer-track-row__bar--${colorKey}`}
           style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }}
         >
-          <div className="layer-track-row__bar-pattern" aria-hidden="true">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Icon key={i} size={12} />
-            ))}
-          </div>
+          {layer.type === 'text' ? (
+            <div className="layer-track-row__bar-caption" aria-hidden="true">
+              <Icon size={12} />
+              <span>{layer.content}</span>
+            </div>
+          ) : (
+            <div className="layer-track-row__bar-pattern" aria-hidden="true">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Icon key={i} size={12} />
+              ))}
+            </div>
+          )}
           <div className="layer-track-row__handle layer-track-row__handle--start" onPointerDown={startDrag('start')} />
           <div className="layer-track-row__handle layer-track-row__handle--end" onPointerDown={startDrag('end')} />
         </div>

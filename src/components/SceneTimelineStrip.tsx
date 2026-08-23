@@ -69,8 +69,31 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
   // ようにする）。autoCenterがfalseの場合はチップ列は普通のスクロール領域なので、
   // ここでの特別なドラッグ処理は行わない（ネイティブスクロール/ホイールに任せる）。
   const mouseDragRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
+  // autoCenterがfalse(PC)のモード用: チップ列自体をクリック/ドラッグして、その位置に
+  // 直接シークする（本家Google Vidsのシークバーと同様、チップ列がシークバーを兼ねる）。
+  // 以前は別に<input type="range">を並べて置いていたが、チップ列がスクロール可能な
+  // 一方でそちらは常に幅100%で動くため、再生位置を示す縦線同士がズレて見える問題が
+  // あった。シークの役割をこのチップ列に一本化することで解消する。
+  const pcScrubRef = useRef(false);
+  function seekFromClientX(clientX: number) {
+    const container = scenesScrollRef.current;
+    if (!container) return;
+    const offsetPx = clientX - container.getBoundingClientRect().left + container.scrollLeft;
+    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, offsetPx));
+  }
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!autoCenter) return;
+    if (!autoCenter) {
+      const container = scenesScrollRef.current;
+      if (!container) return;
+      pcScrubRef.current = true;
+      seekFromClientX(e.clientX);
+      try {
+        container.setPointerCapture(e.pointerId);
+      } catch {
+        // ポインターが既に無効等の場合は無視する(シーク自体は上で済んでいる)
+      }
+      return;
+    }
     isUserScrollingRef.current = true;
     if (resumeAutoScrollTimeoutRef.current !== null) {
       window.clearTimeout(resumeAutoScrollTimeoutRef.current);
@@ -85,13 +108,28 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
     }
   }
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!autoCenter) {
+      if (pcScrubRef.current) seekFromClientX(e.clientX);
+      return;
+    }
     const drag = mouseDragRef.current;
     const container = scenesScrollRef.current;
     if (!drag || !container) return;
     container.scrollLeft = drag.startScrollLeft - (e.clientX - drag.startX);
   }
   function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!autoCenter) return;
+    if (!autoCenter) {
+      const container = scenesScrollRef.current;
+      if (pcScrubRef.current && container) {
+        try {
+          container.releasePointerCapture(e.pointerId);
+        } catch {
+          // すでに解放済みなら何もしなくてよい
+        }
+      }
+      pcScrubRef.current = false;
+      return;
+    }
     const container = scenesScrollRef.current;
     if (mouseDragRef.current && container) {
       try {
@@ -263,7 +301,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
                 width: sceneChipWidthPx(scene.duration),
                 ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
               }}
-              onClick={() => engine.seek(getSceneStartMs(project, scene.id))}
+              onClick={autoCenter ? () => engine.seek(getSceneStartMs(project, scene.id)) : undefined}
             >
               {i + 1}
             </button>

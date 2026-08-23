@@ -169,14 +169,6 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
           <ScissorsIcon size={16} />
         </button>
       </div>
-      <input
-        type="range"
-        className="storyboard__seekbar"
-        min={0}
-        max={engine.totalDurationMs}
-        value={engine.currentTimeMs}
-        onChange={(e) => engine.seek(Number(e.target.value))}
-      />
       <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
       {isTimingOpen && currentScene && <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />}
       <div className="storyboard__actions">
