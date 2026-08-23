@@ -122,6 +122,38 @@ function LayerTrackLane({
   );
 }
 
+/**
+ * シーン切り替え用の縮小チップ列。現在のシーンだけをこの下のトラック列と
+ * 同じ幅まで広げ、他のシーンは番号だけの小さいチップにする。
+ * SceneTimelineStrip(全体の一覧・シークバー)とは別の、この詳細パネル専用の
+ * 簡易セレクタ。lanes列(flexカラム)の中の1行として置くことで、
+ * ルーラーやレイヤー行と幅がぴったり揃う(JS側で幅を計算する必要がない)。
+ */
+function SceneChipRow({ project, scene, engine }: { project: Project; scene: Scene; engine: ProjectPlaybackEngine }) {
+  return (
+    <div className="layer-track-row__lane">
+      <div className="layer-track-panel__chiprow">
+        {project.scenes.map((s, i) =>
+          s.id === scene.id ? (
+            <div key={s.id} className="layer-track-panel__chip layer-track-panel__chip--active">
+              {i + 1}
+            </div>
+          ) : (
+            <button
+              key={s.id}
+              type="button"
+              className="layer-track-panel__chip"
+              onClick={() => engine.seek(getSceneStartMs(project, s.id))}
+            >
+              {i + 1}
+            </button>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SceneRuler({
   scene,
   project,
@@ -171,10 +203,6 @@ export function LayerTimelinePanel({ scene, project, engine }: Props) {
   const selectLayer = useProjectStore((s) => s.selectLayer);
   const updateLayer = useProjectStore((s) => s.updateLayer);
 
-  if (scene.layers.length === 0) {
-    return <div className="layer-track-panel layer-track-panel--empty">このシーンにはまだ要素がありません</div>;
-  }
-
   const rows = [...scene.layers].reverse();
   const showPlayhead = engine.position?.scene.id === scene.id;
   const playheadPct = showPlayhead ? (engine.position!.localTimeMs / Math.max(1, scene.duration)) * 100 : 0;
@@ -183,6 +211,8 @@ export function LayerTimelinePanel({ scene, project, engine }: Props) {
     <div className="layer-track-panel">
       <div className="layer-track-panel__labels">
         <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
+        <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />
+        {rows.length === 0 && <div className="layer-track-row__label layer-track-row__label--ruler" aria-hidden="true" />}
         {rows.map((layer) => (
           <LayerTrackLabel
             key={layer.id}
@@ -194,7 +224,13 @@ export function LayerTimelinePanel({ scene, project, engine }: Props) {
       </div>
       <div className="layer-track-panel__lanes">
         {showPlayhead && <div className="layer-track-panel__playhead" style={{ left: `${playheadPct}%` }} />}
+        <SceneChipRow project={project} scene={scene} engine={engine} />
         <SceneRuler scene={scene} project={project} engine={engine} />
+        {rows.length === 0 && (
+          <div className="layer-track-row__lane">
+            <p className="layer-track-panel__hint">このシーンにはまだ要素がありません</p>
+          </div>
+        )}
         {rows.map((layer) => (
           <LayerTrackLane
             key={layer.id}

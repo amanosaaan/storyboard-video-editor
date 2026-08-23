@@ -576,13 +576,42 @@ button.editor__menubar-item[aria-expanded='true'] {
   overflow-y: auto;
 }
 
-.layer-track-panel--empty {
+.layer-track-panel__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 32px;
+}
+
+.layer-track-panel__chiprow {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.layer-track-panel__chip {
+  flex: 0 0 24px;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-app);
+  color: var(--text);
+  font-size: 11px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: var(--text);
-  padding: 16px 8px;
+}
+
+.layer-track-panel__chip--active {
+  flex: 1 1 auto;
+  min-width: 64px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
 }
 
 .layer-track-panel__labels {
