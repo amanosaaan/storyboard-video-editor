@@ -21,24 +21,25 @@ function formatSec(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function layerTypeMeta(layer: Layer): { Icon: ComponentType<{ size?: number }>; label: string } {
+/** レイヤー種類ごとのアイコン・ラベル・帯の色分けキー(本家Google Vids風に種類ごとに配色を変える)。 */
+function layerTypeMeta(layer: Layer): { Icon: ComponentType<{ size?: number }>; label: string; colorKey: string } {
   switch (layer.type) {
     case 'video':
-      return { Icon: VideoIcon, label: '動画' };
+      return { Icon: VideoIcon, label: '動画', colorKey: 'video' };
     case 'image':
-      return { Icon: ImageIcon, label: '画像' };
+      return { Icon: ImageIcon, label: '画像', colorKey: 'image' };
     case 'audio':
-      return { Icon: AudioIcon, label: '音声' };
+      return { Icon: AudioIcon, label: '音声', colorKey: 'audio' };
     case 'text':
-      return { Icon: TextIcon, label: 'テキスト' };
+      return { Icon: TextIcon, label: 'テキスト', colorKey: 'text' };
     case 'shape':
       switch (layer.shape) {
         case 'circle':
-          return { Icon: ShapeCircleIcon, label: '円' };
+          return { Icon: ShapeCircleIcon, label: '円', colorKey: 'shape' };
         case 'line':
-          return { Icon: ShapeLineIcon, label: '線' };
+          return { Icon: ShapeLineIcon, label: '線', colorKey: 'shape' };
         default:
-          return { Icon: ShapeRectIcon, label: '長方形' };
+          return { Icon: ShapeRectIcon, label: '長方形', colorKey: 'shape' };
       }
   }
 }
@@ -79,6 +80,7 @@ function LayerTrackLane({
   onChange: (patch: { startMs?: number; endMs?: number }) => void;
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const { Icon, colorKey } = layerTypeMeta(layer);
   const { start, end } = getLayerVisibleRange(layer, sceneDurationMs);
   const hasCustomRange = layer.startMs !== undefined || layer.endMs !== undefined;
   const startPct = sceneDurationMs > 0 ? (start / sceneDurationMs) * 100 : 0;
@@ -114,7 +116,15 @@ function LayerTrackLane({
   return (
     <div className={`layer-track-row__lane${isSelected ? ' is-selected' : ''}`}>
       <div className="layer-track-row__track" ref={trackRef} onClick={onSelect}>
-        <div className="layer-track-row__bar" style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }}>
+        <div
+          className={`layer-track-row__bar layer-track-row__bar--${colorKey}`}
+          style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }}
+        >
+          <div className="layer-track-row__bar-pattern" aria-hidden="true">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <Icon key={i} size={12} />
+            ))}
+          </div>
           <div className="layer-track-row__handle layer-track-row__handle--start" onPointerDown={startDrag('start')} />
           <div className="layer-track-row__handle layer-track-row__handle--end" onPointerDown={startDrag('end')} />
         </div>

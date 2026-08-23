@@ -704,13 +704,47 @@ button.editor__menubar-item[aria-expanded='true'] {
   position: absolute;
   top: 0;
   height: 100%;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
 .layer-track-row__lane.is-selected .layer-track-row__bar {
-  background: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+/* 帯の色分け(本家Google Vids風、レイヤー種類ごとに色を変える) */
+.layer-track-row__bar--text {
+  background: #34a853;
+}
+
+.layer-track-row__bar--shape {
+  background: #4c8bf5;
+}
+
+.layer-track-row__bar--video {
+  background: #f9a825;
+}
+
+.layer-track-row__bar--image {
+  background: #ab47bc;
+}
+
+.layer-track-row__bar--audio {
+  background: #ec407a;
+}
+
+.layer-track-row__bar-pattern {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
 }
 
 .layer-track-row__handle {

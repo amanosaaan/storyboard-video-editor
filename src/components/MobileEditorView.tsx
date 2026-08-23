@@ -252,11 +252,8 @@ export function MobileEditorView() {
           </button>
         </div>
         <div className="mobile-editor__scenes">
-          {isTimingOpen ? (
-            <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />
-          ) : (
-            <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter />
-          )}
+          <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter />
+          {isTimingOpen && <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />}
           <div className="mobile-editor__scenes-actions">
             <button
               className="mobile-icon-btn"

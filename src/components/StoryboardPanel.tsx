@@ -177,11 +177,8 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         value={engine.currentTimeMs}
         onChange={(e) => engine.seek(Number(e.target.value))}
       />
-      {isTimingOpen && currentScene ? (
-        <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />
-      ) : (
-        <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
-      )}
+      <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
+      {isTimingOpen && currentScene && <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />}
       <div className="storyboard__actions">
         <button
           className="mobile-icon-btn"
