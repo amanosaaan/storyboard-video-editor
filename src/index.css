@@ -709,6 +709,14 @@ button.editor__menubar-item[aria-expanded='true'] {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
+/* ホバー時、本家同様に水色のリングで「調整できる」ことを示す(タッチ操作にはhoverが無いため、
+   常時操作できるハンドル自体は別途is-selectedでも表示する)。 */
+.layer-track-row__lane:hover .layer-track-row__bar {
+  box-shadow:
+    0 0 0 2px var(--accent-soft),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
 .layer-track-row__lane.is-selected .layer-track-row__bar {
   box-shadow:
     0 0 0 2px var(--accent),
@@ -780,6 +788,14 @@ button.editor__menubar-item[aria-expanded='true'] {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   cursor: ew-resize;
   touch-action: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* ハンドルは常時表示せず、ホバー時(PC)または選択時(タッチでも操作可能に)だけ出す。 */
+.layer-track-row__lane:hover .layer-track-row__handle,
+.layer-track-row__lane.is-selected .layer-track-row__handle {
+  opacity: 1;
 }
 
 .layer-track-row__handle--start {
@@ -1151,6 +1167,42 @@ button.editor__menubar-item[aria-expanded='true'] {
 
 .storyboard__header .layer-track-toggle {
   margin-right: auto;
+}
+
+.storyboard__zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.storyboard__zoom button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-h);
+}
+
+.storyboard__zoom button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.storyboard__zoom input[type='range'] {
+  width: 90px;
+  accent-color: var(--accent);
+}
+
+.storyboard__zoom-value {
+  font-size: 11px;
+  color: var(--text);
+  min-width: 34px;
+  text-align: right;
 }
 
 .storyboard__actions {

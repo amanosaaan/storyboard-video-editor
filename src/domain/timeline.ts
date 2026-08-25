@@ -86,26 +86,32 @@ const SCENE_CHIP_PX_PER_MS = 0.02;
 // あまりに短いシーンだとタップできない/見えなくなるため最低幅を設ける。
 const SCENE_CHIP_MIN_WIDTH_PX = 32;
 
-/** シーンの長さに比例したチップの表示幅(px)を返す（最低幅あり） */
-export function sceneChipWidthPx(durationMs: number): number {
-  return Math.max(SCENE_CHIP_MIN_WIDTH_PX, durationMs * SCENE_CHIP_PX_PER_MS);
+/** シーンの長さに比例したチップの表示幅(px)を返す（最低幅あり）。zoomは表示倍率(1=100%)。 */
+export function sceneChipWidthPx(durationMs: number, zoom = 1): number {
+  return Math.max(SCENE_CHIP_MIN_WIDTH_PX, durationMs * SCENE_CHIP_PX_PER_MS * zoom);
 }
 
 /** 指定したシーン・シーン内ローカル時刻が、チップ列の先頭から何px進んだ位置に当たるかを計算する */
-export function timelinePositionToOffsetPx(scenes: Scene[], sceneIndex: number, localTimeMs: number, sceneDurationMs: number): number {
-  const precedingWidth = scenes.slice(0, sceneIndex).reduce((sum, s) => sum + sceneChipWidthPx(s.duration) + SCENE_CHIP_GAP_PX, 0);
+export function timelinePositionToOffsetPx(
+  scenes: Scene[],
+  sceneIndex: number,
+  localTimeMs: number,
+  sceneDurationMs: number,
+  zoom = 1,
+): number {
+  const precedingWidth = scenes.slice(0, sceneIndex).reduce((sum, s) => sum + sceneChipWidthPx(s.duration, zoom) + SCENE_CHIP_GAP_PX, 0);
   const progress = sceneDurationMs > 0 ? Math.min(1, Math.max(0, localTimeMs / sceneDurationMs)) : 0;
-  return precedingWidth + progress * sceneChipWidthPx(sceneDurationMs);
+  return precedingWidth + progress * sceneChipWidthPx(sceneDurationMs, zoom);
 }
 
 /** timelinePositionToOffsetPxの逆変換。チップ列内のpx位置から、対応する全体タイムライン上のミリ秒を求める。 */
-export function timelineOffsetPxToGlobalMs(scenes: Scene[], offsetPx: number): number {
+export function timelineOffsetPxToGlobalMs(scenes: Scene[], offsetPx: number, zoom = 1): number {
   const clamped = Math.max(0, offsetPx);
   let pxAcc = 0;
   let msAcc = 0;
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
-    const w = sceneChipWidthPx(scene.duration);
+    const w = sceneChipWidthPx(scene.duration, zoom);
     const isLast = i === scenes.length - 1;
     if (clamped < pxAcc + w || isLast) {
       const localPx = Math.min(Math.max(clamped - pxAcc, 0), w);

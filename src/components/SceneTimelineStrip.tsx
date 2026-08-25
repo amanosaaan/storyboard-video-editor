@@ -21,6 +21,8 @@ interface Props {
    * 表示され、チップ列は普通にスクロールするだけ（PC向け）。
    */
   autoCenter: boolean;
+  /** チップ列の表示倍率(1=100%)。省略時は1。本家Google Vidsのズームスライダー用（PC向け）。 */
+  zoom?: number;
 }
 
 /** シーンのプレビューに使う「主役」の動画/画像レイヤーのmediaIdを返す（無ければnull） */
@@ -36,7 +38,7 @@ function getSceneMainMediaId(scene: Scene): string | null {
  * 背景に表示）の列を横スクロール表示する。autoCenterに応じて2つの見た目・挙動を切り替える
  * （詳しくはPropsのコメント参照）。PC・スマホ共通で使う。
  */
-export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter }: Props) {
+export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter, zoom = 1 }: Props) {
   const [sceneThumbUrls, setSceneThumbUrls] = useState<Record<string, string>>({});
   const scenesScrollRef = useRef<HTMLDivElement>(null);
   const inlinePlayheadRef = useRef<HTMLDivElement>(null);
@@ -79,7 +81,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
     const container = scenesScrollRef.current;
     if (!container) return;
     const offsetPx = clientX - container.getBoundingClientRect().left + container.scrollLeft;
-    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, offsetPx));
+    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, offsetPx, zoom));
   }
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (!autoCenter) {
@@ -229,6 +231,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
             position.sceneIndex,
             position.localTimeMs,
             position.scene.duration,
+            zoom,
           );
           if (Math.abs(container.scrollLeft - target) > 0.5) {
             container.scrollLeft = target;
@@ -239,7 +242,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [project, engine.getLiveTimeMs, autoCenter]);
+  }, [project, engine.getLiveTimeMs, autoCenter, zoom]);
 
   // autoCenterがfalseのモード: 線はチップ列の中の実際の時刻位置に表示する
   // （チップ列と一緒にスクロールする、本家Google Vidsのシークバーに近い見た目）。
@@ -257,6 +260,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
             position.sceneIndex,
             position.localTimeMs,
             position.scene.duration,
+            zoom,
           );
           el.style.left = `${offset}px`;
         }
@@ -265,7 +269,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [project, engine.getLiveTimeMs, autoCenter]);
+  }, [project, engine.getLiveTimeMs, autoCenter, zoom]);
 
   // ユーザーがシーンチップ列を直接ドラッグ/スクロールしたら、その位置を再生位置として
   // 扱う（＝チップ列自体がシークバーを兼ねる。autoCenterモードのみ）。
@@ -277,7 +281,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
     if (!container || !isUserScrollingRef.current) return;
     scheduleResumeAutoScroll(); // まだスクロール（慣性含む）が続いているのでタイマーを延長
     // 前後の余白ぶんscrollLeftとoffsetが一致するので、そのままpx→時刻変換にかける。
-    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, container.scrollLeft));
+    engine.seek(timelineOffsetPxToGlobalMs(project.scenes, container.scrollLeft, zoom));
   }
 
   return (
@@ -298,7 +302,7 @@ export function SceneTimelineStrip({ project, engine, currentSceneId, autoCenter
               key={scene.id}
               className={`scene-timeline__chip${scene.id === currentSceneId ? ' is-active' : ''}${sceneThumbUrls[scene.id] ? ' has-thumb' : ''}`}
               style={{
-                width: sceneChipWidthPx(scene.duration),
+                width: sceneChipWidthPx(scene.duration, zoom),
                 ...(sceneThumbUrls[scene.id] ? { backgroundImage: `url(${sceneThumbUrls[scene.id]})` } : undefined),
               }}
               onClick={autoCenter ? () => engine.seek(getSceneStartMs(project, scene.id)) : undefined}

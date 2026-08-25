@@ -4,7 +4,18 @@ import type { Project, Scene, TransitionConfig } from '../domain/types';
 import type { ProjectPlaybackEngine } from '../rendering/useProjectPlaybackEngine';
 import { useProjectStore } from '../state/projectStore';
 import { NumberField } from './NumberField';
-import { ChevronDownIcon, ChevronUpIcon, CopyIcon, PauseIcon, PlayIcon, PlusIcon, ScissorsIcon, SwapIcon, TrashIcon } from './icons';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CopyIcon,
+  MinusIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  ScissorsIcon,
+  SwapIcon,
+  TrashIcon,
+} from './icons';
 import { LayerTimelinePanel } from './LayerTimelinePanel';
 import { SceneTimelineStrip } from './SceneTimelineStrip';
 
@@ -100,6 +111,44 @@ function TransitionButton({ scene, disabled }: TransitionButtonProps) {
   );
 }
 
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 400;
+const ZOOM_STEP = 10;
+
+/** シーンチップ列の拡大・縮小スライダー(本家Google Vidsのズームスライダーと同様、PC向け)。 */
+function ZoomControl({ zoomPercent, onChange }: { zoomPercent: number; onChange: (v: number) => void }) {
+  return (
+    <div className="storyboard__zoom">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(ZOOM_MIN, zoomPercent - ZOOM_STEP))}
+        disabled={zoomPercent <= ZOOM_MIN}
+        aria-label="縮小"
+      >
+        <MinusIcon size={14} />
+      </button>
+      <input
+        type="range"
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        step={ZOOM_STEP}
+        value={zoomPercent}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label="シーンチップの拡大率"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(ZOOM_MAX, zoomPercent + ZOOM_STEP))}
+        disabled={zoomPercent >= ZOOM_MAX}
+        aria-label="拡大"
+      >
+        <PlusIcon size={14} />
+      </button>
+      <span className="storyboard__zoom-value">{zoomPercent}%</span>
+    </div>
+  );
+}
+
 interface Props {
   project: Project;
   currentSceneId: string | null;
@@ -113,6 +162,7 @@ function formatTime(ms: number): string {
 
 export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine }: Props) {
   const [isTimingOpen, setTimingOpen] = useState(false);
+  const [zoomPercent, setZoomPercent] = useState(100);
   const addScene = useProjectStore((s) => s.addScene);
   const duplicateScene = useProjectStore((s) => s.duplicateScene);
   const removeScene = useProjectStore((s) => s.removeScene);
@@ -168,8 +218,15 @@ export function StoryboardPanel({ project, currentSceneId, onSelectScene, engine
         >
           <ScissorsIcon size={16} />
         </button>
+        <ZoomControl zoomPercent={zoomPercent} onChange={setZoomPercent} />
       </div>
-      <SceneTimelineStrip project={project} engine={engine} currentSceneId={currentSceneId} autoCenter={false} />
+      <SceneTimelineStrip
+        project={project}
+        engine={engine}
+        currentSceneId={currentSceneId}
+        autoCenter={false}
+        zoom={zoomPercent / 100}
+      />
       {isTimingOpen && currentScene && <LayerTimelinePanel scene={currentScene} project={project} engine={engine} />}
       <div className="storyboard__actions">
         <button
